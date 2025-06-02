@@ -601,7 +601,7 @@ def custom_calendar():
     except ValueError as e:
         return str(e), 400
 
-    return render_template("calendar.php",
+    return render_template("index.html",
                            english_year=english_year,
                            english_month=english_month_name,
                            english_month_num=english_month_num,
