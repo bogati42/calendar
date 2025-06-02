@@ -508,7 +508,7 @@ def home():
         }
 
     # Data for the initial page render
-    return render_template("calendar.php",
+    return render_template("index.html",
                            nepali_year=current_nepali_year,
                            nepali_month=NEPALI_MONTHS[current_nepali_month_num - 1],
                            nepali_month_num=current_nepali_month_num,
