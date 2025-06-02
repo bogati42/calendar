@@ -1,0 +1,615 @@
+from flask import Flask, render_template, request, jsonify
+import datetime
+import pytz
+
+app = Flask(__name__)
+
+# Reference dates (kept as is)
+BASE_ENGLISH = datetime.date(1943, 4, 14)  # Corresponds to 2000-01-01 BS
+BASE_NEPALI_YEAR = 2000
+BASE_NEPALI_MONTH = 1
+BASE_NEPALI_DAY = 1
+
+# Days in each Nepali month for years from 2000 BS onwards (kept as is)
+BS_DAYS_IN_MONTH = {
+    2000: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2001: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2002: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2003: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2004: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2005: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2006: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2007: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2008: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2009: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2010: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2011: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2012: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2013: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2014: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2015: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2016: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2017: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2018: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2019: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2020: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2021: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2022: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2023: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2024: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2025: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2026: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2027: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2028: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2029: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+    2030: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2031: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2032: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2033: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2034: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2035: [30, 32, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2036: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2037: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2038: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2039: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2040: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2041: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2042: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2043: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2044: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2045: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2046: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2047: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2048: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2049: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2050: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2051: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2052: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2053: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2054: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2055: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2056: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+    2057: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2058: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2059: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2060: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2061: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2062: [30, 32, 31, 32, 31, 31, 29, 30, 29, 30, 29, 31],
+    2063: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2064: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2065: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2066: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2067: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2068: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2069: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2070: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2071: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2072: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2073: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2074: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2075: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2076: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2077: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2078: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2079: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2080: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2081: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2082: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30], # Added 2082 for new holidays
+    2083: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2084: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2085: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+    2086: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+    2087: [31, 31, 32, 31, 31, 31, 30, 30, 29, 30, 30, 30],
+    2088: [30, 31, 32, 32, 30, 31, 30, 30, 29, 30, 30, 30],
+    2089: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+    2090: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+}
+
+# Nepali month names (kept as is)
+NEPALI_MONTHS = [
+    "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
+    "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
+]
+
+# Processed holiday data
+holidays_by_bs_date = {}
+
+# Raw holiday data from your PHP file, adapted to Python list of dicts
+raw_holidays = [
+    {
+        "name": "नेपाली नयाँ वर्ष/मेष संक्रान्ति/बिस्का जात्रा",
+        "bs_date": {"year": 2082, "month": 1, "day": 1},
+        "ad_date": "2025-04-14"
+    },
+    {
+        "name": "अन्तर्राष्ट्रिय श्रमिक दिवस/बुंगद्यो: रातो मत्स्येन्द्रनाथ रथ यात्रा प्रारम्भ",
+        "bs_date": {"year": 2082, "month": 1, "day": 18},
+        "ad_date": "2025-05-01"
+    },
+    {
+        "name": "प्रादेशिक सरकार आधिकारिक भाषा दिवस/किरात समाज सुधार दिवस",
+        "bs_date": {"year": 2082, "month": 1, "day": 24},
+        "ad_date": "2025-05-07"
+    },
+    {
+        "name": "बुद्ध जयन्ती/उभौली पर्व/चण्डेश्वरी जात्रा/चण्डी पूर्णिमा/कूर्म जयन्ती/गोरखनाथ जयन्ती/पूर्णिमा व्रत/बैशाख स्नान समाप्ति/अन्तर्राष्ट्रिय नर्स दिवस",
+        "bs_date": {"year": 2082, "month": 1, "day": 29},
+        "ad_date": "2025-05-12"
+    },
+    {
+        "name": "गणतन्त्र दिवस",
+        "bs_date": {"year": 2082, "month": 2, "day": 15},
+        "ad_date": "2025-05-29"
+    },
+    {
+        "name": "जनै पूर्णिमा/रक्षा बन्धन/क्वाँटी खाने दिन/पूर्णिमा व्रत/ऋषि तर्पणी/संस्कृत दिवस",
+        "bs_date": {"year": 2082, "month": 4, "day": 24},
+        "ad_date": "2025-08-09"
+    },
+    {
+        "name": "गाईजात्रा/विश्व आदिवासी जनजाति दिवस",
+        "bs_date": {"year": 2082, "month": 4, "day": 25},
+        "ad_date": "2025-08-10"
+    },
+    {
+        "name": "श्रीकृष्ण जन्माष्टमी/गोरखकाली पूजा",
+        "bs_date": {"year": 2082, "month": 4, "day": 31},
+        "ad_date": "2025-08-16"
+    },
+    {
+        "name": "हरितालिका तीज",
+        "bs_date": {"year": 2082, "month": 5, "day": 10},
+        "ad_date": "2025-08-26"
+    },
+    {
+        "name": "राधा जन्मोत्सव/गौरा पर्व/गोरखकाली पूजा/दुर्वाष्टमी",
+        "bs_date": {"year": 2082, "month": 5, "day": 15},
+        "ad_date": "2025-08-31"
+    },
+    {
+        "name": "इन्द्रजात्रा/अनन्त चतुर्दशी व्रत",
+        "bs_date": {"year": 2082, "month": 5, "day": 21},
+        "ad_date": "2025-09-06"
+    },
+    {
+        "name": "नवमी श्राद्ध/जितिया पर्व",
+        "bs_date": {"year": 2082, "month": 5, "day": 30},
+        "ad_date": "2025-09-15"
+    },
+    {
+        "name": "त्रयोदशी श्राद्ध/माघ श्राद्ध/संविधान दिवस",
+        "bs_date": {"year": 2082, "month": 6, "day": 3},
+        "ad_date": "2025-09-19"
+    },
+    {
+        "name": "घटस्थापना व्रत/नवरात्र आरम्भ",
+        "bs_date": {"year": 2082, "month": 6, "day": 6},
+        "ad_date": "2025-09-22"
+    },
+    {
+        "name": "फूलपाती/विश्व हृदय दिवस",
+        "bs_date": {"year": 2082, "month": 6, "day": 13},
+        "ad_date": "2025-09-29"
+    },
+    {
+        "name": "महा अष्टमी व्रत/कालरात्री/गोरखकाली पूजा/भौमाष्टमी व्रत",
+        "bs_date": {"year": 2082, "month": 6, "day": 14},
+        "ad_date": "2025-09-30"
+    },
+    {
+        "name": "महा नवमी व्रत/अन्तर्राष्ट्रिय ज्येष्ठ नागरिक दिवस",
+        "bs_date": {"year": 2082, "month": 6, "day": 15},
+        "ad_date": "2025-10-01"
+    },
+    {
+        "name": "विजया दशमी/देवी विसर्जन/विश्व अहिंसा दिवस",
+        "bs_date": {"year": 2082, "month": 6, "day": 16},
+        "ad_date": "2025-10-02"
+    },
+    {
+        "name": "पापकुन्सा एकादशी व्रत/विश्व मुस्कान दिवस",
+        "bs_date": {"year": 2082, "month": 6, "day": 17},
+        "ad_date": "2025-10-03"
+    },
+    {
+        "name": "दशैँ बिदा/शनि प्रदोष व्रत/विश्व पशु दिवस",
+        "bs_date": {"year": 2082, "month": 6, "day": 18},
+        "ad_date": "2025-10-04"
+    },
+    {
+        "name": "लक्ष्मी पूजा/लक्ष्मीप्रसाद देवकोटा जन्मजयन्ती/कुकुर तिहार/नरक चतुर्दशी/सुख रात्री",
+        "bs_date": {"year": 2082, "month": 7, "day": 3},
+        "ad_date": "2025-10-20"
+    },
+    {
+        "name": "तिहार बिदा",
+        "bs_date": {"year": 2082, "month": 7, "day": 4},
+        "ad_date": "2025-10-21"
+    },
+    {
+        "name": "गोवर्धन पूजा/गाइगोरु पूजा/म्ह पूजा/हलि तिहार/नेपाल संवत् ११४५ प्रारम्भ",
+        "bs_date": {"year": 2082, "month": 7, "day": 5},
+        "ad_date": "2025-10-22"
+    },
+    {
+        "name": "भाइ टीका/किजा पूजा",
+        "bs_date": {"year": 2082, "month": 7, "day": 6},
+        "ad_date": "2025-10-23"
+    },
+    {
+        "name": "तिहार बिदा/संयुक्त राष्ट्रसंघ दिवस/विश्व विकास सूचना दिवस",
+        "bs_date": {"year": 2082, "month": 7, "day": 7},
+        "ad_date": "2025-10-24"
+    },
+    {
+        "name": "छठ पर्व",
+        "bs_date": {"year": 2082, "month": 7, "day": 10},
+        "ad_date": "2025-10-27"
+    },
+    {
+        "name": "पूर्णिमा व्रत/चतुर्मास व्रत समाप्ति/कार्तिक स्नान समाप्ति/गुरु नानक जयन्ती",
+        "bs_date": {"year": 2082, "month": 7, "day": 19},
+        "ad_date": "2025-11-05"
+    },
+    {
+        "name": "फाल्गुनन्द जयन्ती",
+        "bs_date": {"year": 2082, "month": 7, "day": 25},
+        "ad_date": "2025-11-11"
+    },
+    {
+        "name": "अन्तर्राष्ट्रिय अपाङ्गता दिवस",
+        "bs_date": {"year": 2082, "month": 8, "day": 17},
+        "ad_date": "2025-12-03"
+    },
+    {
+        "name": "पूर्णिमा व्रत/धान्य पूर्णिमा/योमारी पूर्णी/ज्यापु दिवस",
+        "bs_date": {"year": 2082, "month": 8, "day": 18},
+        "ad_date": "2025-12-04"
+    },
+    {
+        "name": "क्रिसमस",
+        "bs_date": {"year": 2082, "month": 9, "day": 10},
+        "ad_date": "2025-12-25"
+    },
+    {
+        "name": "तमु ल्होसार/कवि शिरोमणि लेखनाथ जयन्ती/पुत्रदा एकादशी व्रत",
+        "bs_date": {"year": 2082, "month": 9, "day": 15},
+        "ad_date": "2025-12-30"
+    },
+    {
+        "name": "पृथ्वी जयन्ती/राष्ट्रिय एकता दिवस/गोरखकाली पूजा",
+        "bs_date": {"year": 2082, "month": 9, "day": 27},
+        "ad_date": "2026-01-11"
+    },
+    {
+        "name": "मकर संक्रान्ति/घिउ चाकु खाने दिन/उत्तरायण आरम्भ",
+        "bs_date": {"year": 2082, "month": 10, "day": 1},
+        "ad_date": "2026-01-15"
+    },
+    {
+        "name": "सोनम ल्होछार/श्री बल्लभ जयन्ती",
+        "bs_date": {"year": 2082, "month": 10, "day": 5},
+        "ad_date": "2026-01-19"
+    },
+    {
+        "name": "बसन्त पञ्चमी व्रत/सरस्वती पूजा",
+        "bs_date": {"year": 2082, "month": 10, "day": 9},
+        "ad_date": "2026-01-23"
+    },
+    {
+        "name": "शहीद दिवस/प्रदोष व्रत",
+        "bs_date": {"year": 2082, "month": 10, "day": 16},
+        "ad_date": "2026-01-30"
+    },
+    {
+        "name": "महाशिवरात्री/सेना दिवस/सिलाचह्रे पूजा",
+        "bs_date": {"year": 2082, "month": 11, "day": 3},
+        "ad_date": "2026-02-15"
+    },
+    {
+        "name": "ग्याल्पो ल्होसार",
+        "bs_date": {"year": 2082, "month": 11, "day": 6},
+        "ad_date": "2026-02-18"
+    },
+    {
+        "name": "प्रजातन्त्र दिवस/निर्वाचन दिवस",
+        "bs_date": {"year": 2082, "month": 11, "day": 7},
+        "ad_date": "2026-02-19"
+    },
+    {
+        "name": "फागु पूर्णिमा/होली/पूर्णिमा व्रत",
+        "bs_date": {"year": 2082, "month": 11, "day": 18},
+        "ad_date": "2026-03-02"
+    },
+    {
+        "name": "फागु पूर्णिमा (तराई)/खण्डग्रास चन्द्र ग्रहण/विश्व वन्यजन्तु दिवस",
+        "bs_date": {"year": 2082, "month": 11, "day": 19},
+        "ad_date": "2026-03-03"
+    },
+    {
+        "name": "अन्तर्राष्ट्रिय महिला दिवस",
+        "bs_date": {"year": 2082, "month": 11, "day": 24},
+        "ad_date": "2026-03-08"
+    },
+    {
+        "name": "घोडे जात्रा",
+        "bs_date": {"year": 2082, "month": 12, "day": 4},
+        "ad_date": "2026-03-18"
+    },
+    {
+        "name": "श्रीराम नवमी व्रत/विश्व रंगमञ्च दिवस",
+        "bs_date": {"year": 2082, "month": 12, "day": 13},
+        "ad_date": "2026-03-27"
+    }
+]
+
+# Convert the raw holiday data into a more accessible format (key: "BS_YEAR-BS_MONTH-BS_DAY")
+for holiday in raw_holidays:
+    bs_year = holiday["bs_date"]["year"]
+    bs_month = holiday["bs_date"]["month"]
+    bs_day = holiday["bs_date"]["day"]
+    key = f"{bs_year}-{bs_month}-{bs_day}"
+    holidays_by_bs_date[key] = holiday["name"]
+
+# Replace the mock_holidays with the newly processed data
+mock_holidays = holidays_by_bs_date
+
+def get_days_in_month(nepali_year, nepali_month):
+    """Retrieve the days in a specific Nepali month for a given year."""
+    if nepali_year in BS_DAYS_IN_MONTH and 1 <= nepali_month <= 12:
+        return BS_DAYS_IN_MONTH[nepali_year][nepali_month - 1]
+    raise ValueError(f"Nepali year {nepali_year} or month {nepali_month} out of range in BS_DAYS_IN_MONTH data.")
+
+def english_to_nepali(english_year, english_month, english_day):
+    """Convert an English date to a Nepali date."""
+    try:
+        current_english = datetime.date(english_year, english_month, english_day)
+    except ValueError as e:
+        raise ValueError(f"Invalid English date: {english_year}-{english_month}-{english_day}. Error: {e}")
+
+    days_diff = (current_english - BASE_ENGLISH).days
+
+    nepali_year = BASE_NEPALI_YEAR
+    nepali_month = BASE_NEPALI_MONTH
+    nepali_day = BASE_NEPALI_DAY
+
+    while days_diff > 0:
+        try:
+            days_in_current_bs_month = get_days_in_month(nepali_year, nepali_month)
+        except ValueError:
+            # If we go out of our defined BS_DAYS_IN_MONTH range,
+            # this indicates an issue or a date outside supported range.
+            # For robust production, extend BS_DAYS_IN_MONTH or use a full library.
+            # For now, return a default or raise.
+            raise ValueError(f"Date conversion exceeded defined Nepali calendar data range (up to {max(BS_DAYS_IN_MONTH.keys())} BS).")
+
+        if days_diff >= days_in_current_bs_month:
+            days_diff -= days_in_current_bs_month
+            nepali_month += 1
+            if nepali_month > 12:
+                nepali_month = 1
+                nepali_year += 1
+        else:
+            nepali_day += days_diff
+            days_diff = 0
+
+    return nepali_year, nepali_month, nepali_day
+
+def nepali_to_english(nepali_year, nepali_month, nepali_day):
+    """Convert a Nepali date to an English date."""
+    days_diff = 0
+
+    # Calculate days from BASE_NEPALI to the given BS date
+    for year in range(BASE_NEPALI_YEAR, nepali_year):
+        if year not in BS_DAYS_IN_MONTH:
+            raise ValueError(f"Nepali year {year} out of range in BS_DAYS_IN_MONTH data.")
+        days_diff += sum(BS_DAYS_IN_MONTH[year])
+
+    if nepali_year not in BS_DAYS_IN_MONTH:
+        raise ValueError(f"Nepali year {nepali_year} out of range in BS_DAYS_IN_MONTH data.")
+
+    days_diff += sum(BS_DAYS_IN_MONTH[nepali_year][:nepali_month - 1])
+    days_diff += nepali_day - 1
+
+    # Calculate English date
+    english_date = BASE_ENGLISH + datetime.timedelta(days=days_diff)
+    return english_date.year, english_date.month, english_date.day
+
+def generate_nepali_calendar_data(nepali_year, nepali_month):
+    """
+    Generate calendar data for a given Nepali year and month,
+    including English dates and holidays for each day.
+    """
+    if nepali_year not in BS_DAYS_IN_MONTH:
+        raise ValueError(f"Calendar data not available for Nepali year {nepali_year}.")
+
+    days_in_month = get_days_in_month(nepali_year, nepali_month)
+
+    # Calculate the English date for the 1st of the Nepali month
+    first_day_english_year, first_day_english_month, first_day_english_day = \
+        nepali_to_english(nepali_year, nepali_month, 1)
+
+    first_day_date_obj = datetime.date(first_day_english_year, first_day_english_month, first_day_english_day)
+
+    # Python's weekday() is 0=Mon, 6=Sun. We need 0=Sun, 6=Sat.
+    first_day_weekday = (first_day_date_obj.weekday() + 1) % 7 # Adjusted line
+
+    days_data = []
+    for d_bs in range(1, days_in_month + 1):
+        try:
+            ad_year, ad_month_num, ad_day = nepali_to_english(nepali_year, nepali_month, d_bs)
+            ad_date_obj = datetime.date(ad_year, ad_month_num, ad_day)
+            english_month_name = ad_date_obj.strftime('%B')
+        except ValueError:
+            # Fallback if conversion fails for a specific day (shouldn't happen with valid data)
+            ad_year, ad_month_num, ad_day = None, None, None
+            english_month_name = None
+
+        # Retrieve holiday from the new mock_holidays structure
+        holiday_name = mock_holidays.get(f"{nepali_year}-{nepali_month}-{d_bs}", None)
+
+        days_data.append({
+            'nepali_day': d_bs,
+            'english_day': ad_day,
+            'english_month': english_month_name,
+            'english_month_num': ad_month_num,
+            'english_year': ad_year,
+            'holiday': holiday_name
+        })
+
+    return {
+        'days_in_month': days_in_month,
+        'first_day_weekday': first_day_weekday,
+        'days_data': days_data
+    }
+
+@app.route('/')
+def home():
+    """Display the current calendar."""
+    # Localize the current time to Nepal Time
+    try:
+        nepal_tz = pytz.timezone("Asia/Kathmandu")
+        current_ad_date = datetime.datetime.now(nepal_tz).date()
+    except Exception:
+        # Fallback to UTC if timezone issue
+        current_ad_date = datetime.datetime.now(datetime.timezone.utc).date()
+
+
+    ad_year = current_ad_date.year
+    ad_month_num = current_ad_date.month
+    ad_day = current_ad_date.day
+
+    # Convert current English date to Nepali date
+    try:
+        current_nepali_year, current_nepali_month_num, current_nepali_day = \
+            english_to_nepali(ad_year, ad_month_num, ad_day)
+    except ValueError as e:
+        print(f"Error converting current English date to Nepali: {e}")
+        # Fallback to a default Nepali date if conversion fails
+        current_nepali_year, current_nepali_month_num, current_nepali_day = 2081, 1, 1 # Default for 2081-01-01 BS
+
+
+    # Get calendar data for the current Nepali month
+    try:
+        calendar_details = generate_nepali_calendar_data(current_nepali_year, current_nepali_month_num)
+    except ValueError as e:
+        print(f"Error generating calendar data for home: {e}")
+        # Provide empty data or a default if calendar generation fails
+        calendar_details = {
+            'days_in_month': 0, 'first_day_weekday': 0, 'days_data': []
+        }
+
+    # Data for the initial page render
+    return render_template("calendar.php",
+                           nepali_year=current_nepali_year,
+                           nepali_month=NEPALI_MONTHS[current_nepali_month_num - 1],
+                           nepali_month_num=current_nepali_month_num,
+                           nepali_day=current_nepali_day, # This is the "today" day
+                           english_year=ad_year,
+                           english_month=current_ad_date.strftime('%B'), # Full month name
+                           english_month_num=ad_month_num,
+                           english_day=ad_day,
+                           nepali_months=NEPALI_MONTHS, # Full list for select box
+                           days=calendar_details['days_data'], # All days data for the month
+                           first_day_weekday=calendar_details['first_day_weekday'],
+                           # These are used by JS to highlight today correctly
+                           current_ad_year=ad_year,
+                           current_ad_month_num=ad_month_num,
+                           current_ad_day=ad_day
+                          )
+
+@app.route('/custom_ajax')
+def custom_calendar_ajax():
+    """Returns JSON calendar data for a custom Nepali date via AJAX."""
+    nepali_year_str = request.args.get('nepali_year')
+    nepali_month_str = request.args.get('nepali_month')
+    nepali_day_str = request.args.get('nepali_day') # This will be the day to highlight
+
+    try:
+        nepali_year = int(nepali_year_str)
+        nepali_month_num = int(nepali_month_str)
+        nepali_day = int(nepali_day_str)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid date parameters"}), 400
+
+    # Validate ranges
+    if not (2000 <= nepali_year <= 2090 and 1 <= nepali_month_num <= 12 and 1 <= nepali_day <= 32):
+        return jsonify({"error": "Date out of valid range (2000-2090 BS)"}), 400
+
+    try:
+        # Get calendar data for the requested Nepali month (which might not be the month of `nepali_day`)
+        calendar_details = generate_nepali_calendar_data(nepali_year, nepali_month_num)
+
+        # Convert the specifically selected Nepali day to English for display headers
+        selected_ad_year, selected_ad_month_num, selected_ad_day = \
+            nepali_to_english(nepali_year, nepali_month_num, nepali_day)
+        selected_english_date_obj = datetime.date(selected_ad_year, selected_ad_month_num, selected_ad_day)
+        selected_english_month_name = selected_english_date_obj.strftime('%B')
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
+    # Prepare data for JSON response
+    response_data = {
+        'nepali_year': nepali_year,
+        'nepali_month_num': nepali_month_num,
+        'nepali_month': NEPALI_MONTHS[nepali_month_num - 1],
+        'nepali_day': nepali_day, # The day the user selected to view/highlight
+        'english_year': selected_ad_year,
+        'english_month': selected_english_month_name,
+        'english_month_num': selected_ad_month_num,
+        'english_day': selected_ad_day,
+        'first_day_weekday': calendar_details['first_day_weekday'],
+        'days': calendar_details['days_data'], # Full list of day objects
+        'nepali_months': NEPALI_MONTHS, # For JS consistency, though not strictly needed here
+        'viewing_selected_day': True # Flag for JS to highlight the selected day
+    }
+    return jsonify(response_data)
+
+@app.route('/custom', methods=['POST'])
+def custom_calendar():
+    """Display a custom calendar based on user input (full page reload)."""
+    try:
+        nepali_year = int(request.form['nepali_year'])
+        nepali_month = int(request.form['nepali_month'])
+        nepali_day = int(request.form['nepali_day'])
+    except (ValueError, TypeError):
+        # Redirect back or show an error
+        return "Invalid date parameters provided.", 400
+
+    # Get calendar data for the selected month
+    try:
+        calendar_details = generate_nepali_calendar_data(nepali_year, nepali_month)
+    except ValueError as e:
+        return str(e), 400
+
+    # Convert the selected Nepali day to English for display headers
+    try:
+        english_year, english_month_num, english_day = nepali_to_english(nepali_year, nepali_month, nepali_day)
+        current_english_date_obj = datetime.date(english_year, english_month_num, english_day)
+        english_month_name = current_english_date_obj.strftime("%B")
+    except ValueError as e:
+        return str(e), 400
+
+    return render_template("calendar.php",
+                           english_year=english_year,
+                           english_month=english_month_name,
+                           english_month_num=english_month_num,
+                           english_day=english_day,
+                           nepali_year=nepali_year,
+                           nepali_month=NEPALI_MONTHS[nepali_month - 1],
+                           nepali_month_num=nepali_month,
+                           nepali_day=nepali_day,
+                           days=calendar_details['days_data'],
+                           first_day_weekday=calendar_details['first_day_weekday'],
+                           nepali_months=NEPALI_MONTHS,
+                           # Pass current AD date for 'today' highlighting
+                           current_ad_year=datetime.datetime.now(pytz.timezone("Asia/Kathmandu")).year,
+                           current_ad_month_num=datetime.datetime.now(pytz.timezone("Asia/Kathmandu")).month,
+                           current_ad_day=datetime.datetime.now(pytz.timezone("Asia/Kathmandu")).day
+                          )
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

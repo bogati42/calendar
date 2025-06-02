@@ -1,0 +1,419 @@
+        /*
+        Nepali Calendar - Dynamic & Advanced Styling
+        This CSS integrates modern design principles with responsiveness.
+        It's designed to complement your existing full-width header.
+        */
+
+        :root {
+            --background-color: #f8f9fa; /* Light background */
+            --surface-color: #ffffff;    /* Card/element background */
+            --text-color: #343a40;       /* Dark text */
+            --secondary-text-color: #6c757d; /* Lighter text */
+            --accent-color: #28a745;     /* Green accent */
+            --accent-hover-color: #218838; /* Darker green on hover */
+            --border-color: #e9ecef;     /* Light border */
+            --weekend-color: #dc3545;    /* Red for weekends */
+            --today-bg-color: #007bff;   /* Blue for today's date */
+            --today-text-color: #ffffff; /* White text for today */
+
+            /* Typography */
+            --font-sans: 'Noto Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            --font-mono: 'Roboto Mono', monospace;
+
+            /* Spacing */
+            --spacing-xs: 5px;
+            --spacing-sm: 10px;
+            --spacing-md: 15px;
+            --spacing-lg: 20px;
+            --spacing-xl: 30px;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0; /* Ensures full width */
+            font-family: var(--font-sans);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            box-sizing: border-box;
+            line-height: 1.6;
+        }
+
+        /* Main content wrapper to align with your header's .container */
+        .main-content-wrapper {
+            max-width: 1200px;
+            margin: var(--spacing-lg) auto; /* Top/bottom margin, horizontal auto for centering */
+            padding: 0 var(--spacing-lg); /* Horizontal padding */
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1; /* Allows it to expand and push footer down */
+            gap: var(--spacing-lg); /* Space between calendar elements */
+        }
+
+        .calendar-header-section {
+            text-align: center;
+            padding: var(--spacing-md);
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: var(--spacing-lg); /* Space below the header section */
+        }
+        .calendar-header-section h2 {
+            margin: 0 0 var(--spacing-sm);
+            font-size: 1.8em;
+            color: var(--text-color);
+        }
+        .calendar-header-section p {
+            margin: 0;
+            font-size: 1.1em;
+            color: var(--secondary-text-color);
+        }
+
+        .month-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            background-color: var(--surface-color);
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .month-navigation button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        .month-navigation button:hover {
+            background-color: var(--accent-hover-color);
+            transform: translateY(-2px);
+        }
+        .month-navigation button:active {
+            transform: translateY(0);
+        }
+        .month-navigation span {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .month-navigation i {
+            font-size: 1.1em; /* Adjust icon size */
+        }
+
+
+        .date-selector-form {
+            background-color: var(--surface-color);
+            padding: var(--spacing-lg);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-wrap: wrap; /* Allow items to wrap */
+            gap: var(--spacing-md); /* Space between form elements */
+            justify-content: center;
+            align-items: flex-end; /* Align inputs/buttons at the bottom */
+            margin-bottom: var(--spacing-lg);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto; /* Allow flexible width */
+            min-width: 120px; /* Minimum width for inputs */
+        }
+        .input-group label {
+            margin-bottom: var(--spacing-xs);
+            font-weight: bold;
+            color: var(--secondary-text-color);
+            font-size: 0.9em;
+        }
+        .input-group select { /* Now applies to all dropdowns */
+            padding: var(--spacing-sm);
+            font-size: 1em;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+        }
+        .input-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+        }
+        .date-selector-form button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            flex-shrink: 0; /* Prevent button from shrinking */
+        }
+        .date-selector-form button:hover {
+            background-color: var(--accent-hover-color);
+            transform: translateY(-2px);
+        }
+        .date-selector-form button:active {
+            transform: translateY(0);
+        }
+
+        .calendar-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px; /* Creates subtle borders between cells */
+            background-color: var(--border-color); /* Background for the gaps/borders */
+            border-radius: 8px;
+            overflow: hidden; /* Ensures rounded corners apply to content */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .day-name {
+            background-color: var(--surface-color);
+            padding: var(--spacing-sm);
+            text-align: center;
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 0.9em;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .day-cell {
+            background-color: var(--surface-color);
+            padding: var(--spacing-sm);
+            text-align: center;
+            min-height: 80px; /* Adjust as needed */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            font-size: 1em;
+        }
+
+        .day-cell:hover:not(.empty):not(.today) {
+            background-color: var(--background-color);
+            transform: scale(1.02);
+            z-index: 1; /* Bring hovered day to front */
+        }
+        .day-cell.empty {
+            background-color: var(--background-color);
+            cursor: default;
+        }
+        .day-cell.sat, .day-cell.sun {
+            color: var(--weekend-color);
+            font-weight: bold;
+        }
+        .day-cell.today {
+            background-color: var(--today-bg-color);
+            color: var(--today-text-color);
+            font-weight: bold;
+            border-radius: 8px; /* Square corners for today */
+            transform: scale(1.05); /* Make today stand out */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .day-cell.today .nepali-day-number,
+        .day-cell.today .english-day-number,
+        .day-cell.today .holiday-name {
+            color: var(--today-text-color); /* Ensure text is white for today */
+        }
+
+        .nepali-day-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            display: block;
+            margin-bottom: var(--spacing-xs);
+        }
+        .english-day-number {
+            font-size: 0.8em;
+            color: var(--secondary-text-color);
+            display: block;
+        }
+        .day-cell.today .english-day-number {
+             color: rgba(255, 255, 255, 0.8); /* Slightly less prominent for today */
+        }
+
+        .holiday-name {
+            font-size: 0.7em;
+            color: var(--accent-color);
+            position: absolute;
+            bottom: var(--spacing-xs);
+            left: var(--spacing-xs);
+            right: var(--spacing-xs);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: bold;
+        }
+        .day-cell.sat .holiday-name {
+            color: var(--weekend-color); /* Match weekend color for holidays on Sat */
+        }
+        .day-cell.holiday:not(.sat):not(.today) {
+            background-color: #fff3cd; /* Light yellow for non-weekend holidays */
+            border: 1px dashed var(--accent-color);
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            font-size: 1.5em;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+        #loading-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: var(--spacing-sm);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Tooltip for Day Details */
+        .day-tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            z-index: 10000; /* Higher than loading overlay */
+            display: none;
+            pointer-events: none; /* Allows clicks to pass through */
+            white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            line-height: 1.4;
+            transform: translate(-50%, -100%); /* Position above element */
+            left: 50%; /* Center horizontally on element */
+            bottom: calc(100% + 5px); /* 5px above the element */
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                margin: var(--spacing-lg) auto;
+                padding: 0 var(--spacing-md);
+            }
+            .month-navigation {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            .month-navigation span {
+                font-size: 1.3em;
+            }
+            .date-selector-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .input-group {
+                min-width: unset;
+                width: 100%;
+            }
+            .date-selector-form button {
+                width: 100%;
+            }
+            .calendar-grid .day-cell {
+                min-height: 60px; /* Smaller cells on small screens */
+                font-size: 0.9em;
+            }
+            .nepali-day-number {
+                font-size: 1.2em;
+            }
+        }
+
+        @media (max-width: 480px) {
+             .main-content-wrapper {
+                padding: 0 var(--spacing-sm);
+            }
+            .calendar-header-section h2 {
+                font-size: 1.5em;
+            }
+            .calendar-header-section p {
+                font-size: 1em;
+            }
+            .month-navigation button {
+                padding: var(--spacing-xs) var(--spacing-sm);
+                font-size: 0.9em;
+            }
+            .month-navigation i {
+                font-size: 1em;
+            }
+            .date-selector-form {
+                padding: var(--spacing-md);
+            }
+            .calendar-grid .day-cell {
+                min-height: 50px;
+                font-size: 0.8em;
+            }
+            .nepali-day-number {
+                font-size: 1.1em;
+            }
+            .english-day-number {
+                font-size: 0.7em;
+            }
+            .holiday-name {
+                font-size: 0.6em;
+            }
+        }
+
+        /* Styles for the "Go to Main Page" link at the bottom */
+        .main-page-link {
+            margin-top: var(--spacing-xl); /* Pushes this element down */
+            padding: var(--spacing-lg); /* Add some padding around the link */
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: var(--surface-color); /* Match body/header background */
+            border-top: 1px solid var(--border-color); /* Subtle separator */
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.03); /* Subtle shadow upwards */
+        }
+
+        .main-page-link a {
+            color: var(--accent-color); /* Use the primary link color */
+            text-decoration: none; /* Remove default underline */
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: color 0.3s ease, transform 0.3s ease;
+            display: inline-block; /* Allows transform on the link itself */
+        }
+
+        .main-page-link a:hover {
+            color: var(--accent-hover-color); /* Change color on hover */
+            text-decoration: underline; /* Add underline on hover */
+            transform: scale(1.05); /* Slightly enlarge on hover */
+        }

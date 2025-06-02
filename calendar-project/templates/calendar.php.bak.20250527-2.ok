@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nepali Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --background-color: #f8f9fa; --surface-color: #ffffff; --text-color: #343a40;
+            --secondary-text-color: #6c757d; --accent-color: #28a745; --accent-hover-color: #218838;
+            --border-color: #e0e0e0; --weekend-color: #dc3545; --holiday-bg-color: #fff3cd;
+            --today-bg-color: #007bff; --today-text-color: #ffffff;
+            --font-sans: 'Noto Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            --font-mono: 'Roboto Mono', monospace; --spacing-xs: 5px; --spacing-sm: 10px; --spacing-md: 15px;
+            --spacing-lg: 20px; --spacing-xl: 30px; --border-radius-sm: 4px; --border-radius-md: 8px;
+            --box-shadow-light: 0 2px 5px rgba(0,0,0,0.07); --box-shadow-medium: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        html { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        *, *::before, *::after { box-sizing: inherit; }
+        body { display: flex; flex-direction: column; min-height: 100vh; margin: 0; padding: 0; font-family: var(--font-sans); background-color: var(--background-color); color: var(--text-color); line-height: 1.6; }
+        .main-content-wrapper { max-width: 1500px; width: 95%; margin: var(--spacing-lg) auto; padding: 0 var(--spacing-sm); display: flex; flex-direction: column; flex-grow: 1; gap: var(--spacing-lg); }
+        .calendar-card { background-color: var(--surface-color); border-radius: var(--border-radius-md); box-shadow: var(--box-shadow-light); padding: var(--spacing-md); margin-bottom: var(--spacing-lg); }
+        .calendar-card:last-child { margin-bottom: 0; }
+        .calendar-header-section { text-align: center; }
+        .calendar-header-section h2 { margin: 0 0 var(--spacing-sm); font-size: clamp(1.5em, 4vw, 1.8em); color: var(--text-color); }
+        .calendar-header-section p { margin: 0; font-size: clamp(1em, 3vw, 1.1em); color: var(--secondary-text-color); }
+        .month-navigation { display: flex; justify-content: space-between; align-items: center; }
+        .month-navigation button { background-color: var(--accent-color); color: white; border: none; padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--border-radius-sm); cursor: pointer; font-size: 1em; transition: background-color 0.2s ease, transform 0.15s ease; display: flex; align-items: center; gap: var(--spacing-xs); }
+        .month-navigation button:hover:not(:disabled) { background-color: var(--accent-hover-color); transform: translateY(-2px); }
+        .month-navigation button:active:not(:disabled) { transform: translateY(0); }
+        .month-navigation button:disabled { background-color: var(--secondary-text-color); cursor: not-allowed; }
+        .month-navigation span#current-view-display { font-size: clamp(1.3em, 3.5vw, 1.5em); font-weight: bold; color: var(--text-color); text-align: center; padding: 0 var(--spacing-sm); flex-grow: 1; min-width: 150px; }
+        .month-navigation i { font-size: 1.1em; }
+        .date-selector-form { display: flex; flex-wrap: wrap; gap: var(--spacing-md); justify-content: center; align-items: flex-end; }
+	.input-group select, .date-selector-form button[type="submit"] {
+            /* MODIFIED: Reduced padding, font-size, and height */
+            padding: var(--spacing-xs) var(--spacing-sm); /* Becomes 5px top/bottom, 10px left/right */
+            font-size: 0.9em;   /* Slightly smaller font, matches label font size */
+            height: 36px;       /* Reduced height */
+
+            /* Unchanged properties from original rule */
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            background-color: var(--surface-color); /* Keep distinct background for inputs */
+            color: var(--text-color);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        /* Ensure the button text specific color is maintained if it was different */
+        /* This rule should already exist and take precedence for button specific colors */
+        .date-selector-form button[type="submit"] {
+            background-color: var(--accent-color); /* Specific to button */
+            color: white; /* Specific to button */
+            cursor: pointer;
+            flex-shrink: 0;
+            /* Padding, font-size, height are now inherited from the rule above */
+        }
+        /* Hover and active states for the button will still apply from existing rules */
+	.calendar-grid { width: 100%; display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: var(--border-color); border-radius: var(--border-radius-md); overflow: hidden; box-shadow: var(--box-shadow-light); border: 1px solid var(--border-color); }
+        .day-name { background-color: #f1f3f5; padding: var(--spacing-sm); text-align: center; font-weight: bold; color: var(--text-color); font-size: 0.9em; }
+        .day-cell { background-color: var(--surface-color); padding: var(--spacing-sm); text-align: center; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; cursor: pointer; transition: background-color 0.2s ease, transform 0.2s ease; font-size: 1em; overflow: hidden; }
+        .day-cell:hover:not(.empty):not(.today) { background-color: #e9ecef; transform: scale(1.02); z-index: 10; }
+        .day-cell.empty { background-color: var(--background-color); cursor: default; }
+        .day-cell.sat .nepali-day-number, .day-cell.sun .nepali-day-number { color: var(--weekend-color); }
+        .day-cell.sat .english-day-number, .day-cell.sun .english-day-number { color: var(--weekend-color); opacity: 0.8; }
+        .day-cell.today { background-color: var(--today-bg-color) !important; color: var(--today-text-color) !important; font-weight: bold; border-radius: var(--border-radius-sm); transform: scale(1.03); box-shadow: 0 0 0 2px var(--today-bg-color) inset, var(--box-shadow-medium); z-index: 20; }
+        .day-cell.today .nepali-day-number, .day-cell.today .english-day-number, .day-cell.today .holiday-name { color: var(--today-text-color) !important; }
+        .day-cell.holiday:not(.today) { background-color: var(--holiday-bg-color); }
+        .day-cell.holiday .holiday-name { color: #b54c00; }
+        .nepali-day-number { font-size: 1.5em; font-weight: bold; display: block; margin-bottom: var(--spacing-xs); }
+        .english-day-number { font-size: 0.8em; color: var(--secondary-text-color); display: block; font-family: var(--font-mono); }
+        .day-cell.today .english-day-number { color: rgba(255,255,255,0.85); }
+        .holiday-name { font-size: 0.75em; font-weight: bold; position: absolute; bottom: var(--spacing-xs); left: var(--spacing-xs); right: var(--spacing-xs); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+        #loading-overlay { position: fixed; top:0;left:0;width:100%;height:100%;background-color:rgba(255,255,255,0.85);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;color:var(--text-color);font-size:1.3em;transition:opacity .3s ease,visibility 0s .3s;opacity:0;visibility:hidden; }
+        #loading-overlay.visible { opacity:1;visibility:visible;transition:opacity .3s ease,visibility 0s 0s; }
+        .spinner { border:4px solid rgba(0,0,0,0.1);border-top-color:var(--accent-color);border-radius:50%;width:35px;height:35px;animation:spin .8s linear infinite;margin-bottom:var(--spacing-md); }
+        @keyframes spin { to{transform:rotate(360deg);} }
+        .day-tooltip { position:fixed;background-color:#333;color:#fff;padding:var(--spacing-sm) var(--spacing-md);border-radius:var(--border-radius-sm);font-size:.9em;z-index:10000;display:none;pointer-events:none;white-space:pre-wrap;box-shadow:var(--box-shadow-medium);line-height:1.4;width:max-content;max-width:250px; }
+        .day-tooltip::after { content:'';position:absolute;left:50%;border:solid transparent;height:0;width:0;pointer-events:none;border-width:6px;margin-left:-6px;bottom:100%;border-bottom-color:#333; }
+        .main-page-link { margin-top:var(--spacing-xl);padding:var(--spacing-lg) 0;text-align:center;width:100%;background-color:var(--surface-color);border-top:1px solid var(--border-color);box-shadow:0 -2px 5px rgba(0,0,0,0.05); }
+        .main-page-link a { color:var(--accent-color);text-decoration:none;font-size:1.1rem;font-weight:bold;padding:var(--spacing-xs) var(--spacing-sm);transition:color .2s ease,text-decoration .2s ease; }
+        .main-page-link a:hover { color:var(--accent-hover-color);text-decoration:underline; }
+        @media (max-width:768px){.main-content-wrapper{width:auto;padding:0 var(--spacing-md);}.month-navigation{flex-direction:column;gap:var(--spacing-md);}.month-navigation span#current-view-display{font-size:1.3em;order:-1;margin-bottom:var(--spacing-sm);}.date-selector-form{flex-direction:column;align-items:stretch;}.input-group{min-width:0;width:100%;}.date-selector-form button[type="submit"]{width:100%;}.calendar-grid .day-cell{min-height:70px;font-size:.9em;}.nepali-day-number{font-size:1.2em;}.english-day-number{font-size:.75em;}.holiday-name{font-size:.7em;}}
+        @media (max-width:480px){.main-content-wrapper{padding:0 var(--spacing-sm);}.calendar-header-section h2{font-size:1.4em;}.calendar-header-section p{font-size:.95em;}.month-navigation button{padding:var(--spacing-sm) var(--spacing-md);font-size:.9em;width:100%;justify-content:center;}.month-navigation span#current-view-display{font-size:1.2em;}.month-navigation i{font-size:1em;}.date-selector-form{padding:var(--spacing-md);}.calendar-grid .day-cell{min-height:60px;font-size:.8em;padding:var(--spacing-xs);}.nepali-day-number{font-size:1.1em;}.english-day-number{font-size:.7em;}.holiday-name{font-size:.65em;}.day-name{font-size:.8em;padding:var(--spacing-xs);}}
+    </style>
+</head>
+<body>
+    <div class="main-content-wrapper">
+
+        <div class="calendar-header-section">
+            <h2 id="current-nepali-date-display"></h2> {# Will be updated by JS #}
+            <p id="selected-date-display"></p> {# Will be updated by JS #}
+        </div>
+
+        <form id="date-selector-form" class="date-selector-form" action="/custom" method="POST">
+            <div class="input-group">
+                <label for="nepali_year_select">Nepali Year:</label>
+                <select name="nepali_year" id="nepali_year_select" required>
+                    {# Options will be dynamically populated by JS #}
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="nepali_month_select">Month:</label>
+                <select name="nepali_month" id="nepali_month_select" required>
+                    {# Options will be dynamically populated by JS #}
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="nepali_day_select">Day:</label>
+                <select name="nepali_day" id="nepali_day_select" required>
+                    {# Options will be dynamically populated by JS #}
+                </select>
+            </div>
+            <button type="submit" id="go-to-date-btn">Go to Date</button>
+	</form>
+	<div class="month-navigation">
+            <button id="prev-month-btn"><i class="fas fa-chevron-left"></i> Previous</button>
+            <span id="current-view-display"></span> <button id="next-month-btn">Next <i class="fas fa-chevron-right"></i></button>
+        </div>
+
+        <div id="calendar-grid-container" class="calendar-grid">
+            <div class="day-name">आइतबार</div>
+            <div class="day-name">सोमबार</div>
+            <div class="day-name">मंगलबार</div>
+            <div class="day-name">बुधबार</div>
+            <div class="day-name">बिहिबार</div>
+            <div class="day-name">शुक्रबार</div>
+            <div class="day-name">शनिबार</div>
+
+            {# This section will be dynamically rendered by JavaScript on initial load and subsequent changes #}
+        </div>
+    </div>
+    <div id="loading-overlay">
+        <div class="spinner"></div> Loading Calendar...
+    </div>
+    <div class="main-page-link">
+        <a href="http://34.30.240.75/">Go to Main Page</a>
+    </div>
+    <script>
+        // Store the Nepali months and days in JS objects
+        const NEP_MONTHS = {
+            1: 'बैशाख', 2: 'जेठ', 3: 'असार', 4: 'श्रावण',
+            5: 'भदौ', 6: 'असोज', 7: 'कार्तिक', 8: 'मंसिर',
+            9: 'पुष', 10: 'माघ', 11: 'फागुन', 12: 'चैत'
+        };
+
+        const NEP_DAYS_OF_WEEK = {
+            0: 'आइतबार',
+            1: 'सोमबार',
+            2: 'मंगलबार',
+            3: 'बुधबार',
+            4: 'बिहिबार',
+            5: 'शुक्रबार',
+            6: 'शनिबार'
+        };
+
+        function convertToNepaliNumber(num) {
+            const nepaliNumbers = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+            return String(num).split('').map(digit => nepaliNumbers[parseInt(digit)]).join('');
+        }
+
+        let currentNepaliYear = parseInt("{{ nepali_year }}");
+        let currentNepaliMonthNum = parseInt("{{ nepali_month_num }}");
+        let currentNepaliDay = parseInt("{{ nepali_day }}");
+
+        const currentNepaliDateDisplay = document.getElementById('current-nepali-date-display');
+        const selectedDateDisplay = document.getElementById('selected-date-display');
+        const currentViewDisplay = document.getElementById('current-view-display');
+        const prevMonthBtn = document.getElementById('prev-month-btn');
+        const nextMonthBtn = document.getElementById('next-month-btn');
+        const nepaliYearSelect = document.getElementById('nepali_year_select');
+        const nepaliMonthSelect = document.getElementById('nepali_month_select');
+        const nepaliDaySelect = document.getElementById('nepali_day_select');
+        const dateSelectorForm = document.getElementById('date-selector-form');
+        const calendarGridContainer = document.getElementById('calendar-grid-container');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        // Nepali localization additions
+        document.addEventListener('DOMContentLoaded', () => {
+            // Translate navigation buttons
+            prevMonthBtn.innerHTML = '<i class="fas fa-chevron-left"></i> अघिल्लो';
+            nextMonthBtn.innerHTML = 'अर्को <i class="fas fa-chevron-right"></i>';
+
+            // Translate form labels
+            document.querySelector('label[for="nepali_year_select"]').textContent = 'नेपाली वर्ष:';
+            document.querySelector('label[for="nepali_month_select"]').textContent = 'महिना:';
+            document.querySelector('label[for="nepali_day_select"]').textContent = 'दिन:';
+
+            // Translate button text
+            document.getElementById('go-to-date-btn').textContent = 'मिति जानुहोस्';
+
+            // Translate loading message
+            document.querySelector('#loading-overlay div:last-child').textContent = 'पात्रो लोड गर्दै...';
+
+            // Translate main page link
+            document.querySelector('.main-page-link a').textContent = 'मुख्य पृष्ठमा जानुहोस्';
+
+            fetchCalendar(currentNepaliYear, currentNepaliMonthNum, currentNepaliDay);
+        });
+
+        function showLoading() {
+            loadingOverlay.classList.add('visible');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.remove('visible');
+        }
+
+        function updateDisplayHeaders(data) {
+            currentNepaliDateDisplay.textContent = `${NEP_MONTHS[data.nepali_month_num]} ${convertToNepaliNumber(data.nepali_year)} (${data.english_month} ${data.english_year})`;
+            selectedDateDisplay.textContent = `चयन गरिएको मिति: ${convertToNepaliNumber(data.nepali_day)} ${NEP_MONTHS[data.nepali_month_num]} ${convertToNepaliNumber(data.nepali_year)} (${data.english_day} ${data.english_month} ${data.english_year})`;
+            currentViewDisplay.textContent = `${NEP_MONTHS[data.nepali_month_num]} ${convertToNepaliNumber(data.nepali_year)}`;
+        }
+
+        function updateFormDropdowns() {
+            nepaliYearSelect.innerHTML = '';
+            const minYear = 2000;
+            const maxYear = 2090;
+            for (let year = minYear; year <= maxYear; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = convertToNepaliNumber(year);
+                if (year === currentNepaliYear) option.selected = true;
+                nepaliYearSelect.appendChild(option);
+            }
+
+            nepaliMonthSelect.innerHTML = '';
+            for (let i = 1; i <= 12; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = NEP_MONTHS[i];
+                if (i === currentNepaliMonthNum) option.selected = true;
+                nepaliMonthSelect.appendChild(option);
+            }
+
+            nepaliDaySelect.innerHTML = '';
+            const maxDay = 32;
+            for (let day = 1; day <= maxDay; day++) {
+                const option = document.createElement('option');
+                option.value = day;
+                option.textContent = convertToNepaliNumber(day);
+                if (day === currentNepaliDay) option.selected = true;
+                nepaliDaySelect.appendChild(option);
+            }
+        }
+
+        function renderCalendar(data) {
+            let html = '';
+            const dayNames = ['आइतबार', 'सोमबार', 'मंगलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
+            dayNames.forEach(name => html += `<div class="day-name">${name}</div>`);
+
+            const totalDays = data.days.length;
+            const firstDayWeekday = data.first_day_weekday;
+
+            for (let week = 0; week < Math.ceil((totalDays + firstDayWeekday) / 7); week++) {
+                for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+                    const currentDayVal = (week * 7) + dayIndex - firstDayWeekday + 1;
+                    let cellClass = 'day-cell';
+
+                    if (currentDayVal === data.nepali_day && data.nepali_year === currentNepaliYear && data.nepali_month_num === currentNepaliMonthNum) {
+                        cellClass += ' today';
+                    } else if (dayIndex === 6) {
+                        cellClass += ' sat';
+                    } else if (dayIndex === 0) {
+                        cellClass += ' sun';
+                    }
+
+                    if (currentDayVal > 0 && currentDayVal <= totalDays) {
+                        const dayData = data.days[currentDayVal - 1];
+                        let cellContent = `<span class="nepali-day-number">${convertToNepaliNumber(currentDayVal)}</span>`;
+                        cellContent += `<span class="english-day-number">${dayData.english_day}</span>`;
+
+                        if (dayData.holiday) {
+                            cellContent += `<span class="holiday-name">${dayData.holiday}</span>`;
+                            cellClass += ' holiday';
+                        }
+
+                        const tooltipNepaliMonth = NEP_MONTHS[data.nepali_month_num];
+                        const tooltipContent = `नेपाली: ${convertToNepaliNumber(currentDayVal)} ${tooltipNepaliMonth} ${convertToNepaliNumber(data.nepali_year)}\nअंग्रेजी: ${dayData.english_day} ${dayData.english_month} ${dayData.english_year}${dayData.holiday ? `\nचाड: ${dayData.holiday}` : ''}`;
+
+                        html += `<div class="${cellClass}" data-nepali-year="${data.nepali_year}" data-nepali-month-num="${data.nepali_month_num}" data-nepali-day="${currentDayVal}" data-tooltip="${tooltipContent}">${cellContent}</div>`;
+                    } else {
+                        html += `<div class="day-cell empty"></div>`;
+                    }
+                }
+            }
+            calendarGridContainer.innerHTML = html;
+            addDayCellEventListeners();
+        }
+
+        async function fetchCalendar(year, monthNum, day) {
+            showLoading();
+            try {
+                const response = await fetch(`/custom_ajax?nepali_year=${year}&nepali_month=${monthNum}&nepali_day=${day}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                currentNepaliYear = data.nepali_year;
+                currentNepaliMonthNum = data.nepali_month_num;
+                currentNepaliDay = data.nepali_day;
+
+                updateFormDropdowns();
+                updateDisplayHeaders(data);
+                renderCalendar(data);
+            } catch (error) {
+                console.error("Error fetching calendar data:", error);
+                alert("पात्रो लोड गर्न असमर्थ भयो। कृपया पुन: प्रयास गर्नुहोस्।");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        prevMonthBtn.addEventListener('click', () => {
+            let newMonthNum = currentNepaliMonthNum - 1;
+            let newYear = currentNepaliYear;
+            if (newMonthNum < 1) { newMonthNum = 12; newYear--; }
+            fetchCalendar(newYear, newMonthNum, 1);
+        });
+
+        nextMonthBtn.addEventListener('click', () => {
+            let newMonthNum = currentNepaliMonthNum + 1;
+            let newYear = currentNepaliYear;
+            if (newMonthNum > 12) { newMonthNum = 1; newYear++; }
+            fetchCalendar(newYear, newMonthNum, 1);
+        });
+
+        dateSelectorForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            fetchCalendar(parseInt(nepaliYearSelect.value), parseInt(nepaliMonthSelect.value), parseInt(nepaliDaySelect.value));
+        });
+
+        function addDayCellEventListeners() {
+            document.querySelectorAll('.day-tooltip').forEach(tooltip => tooltip.remove());
+            document.querySelectorAll('.day-cell:not(.empty)').forEach(cell => {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'day-tooltip';
+                document.body.appendChild(tooltip);
+
+                cell.addEventListener('mouseenter', (e) => {
+                    const tooltipText = cell.getAttribute('data-tooltip');
+                    if (tooltipText) {
+                        tooltip.textContent = tooltipText;
+                        tooltip.style.display = 'block';
+                        const rect = cell.getBoundingClientRect();
+                        tooltip.style.left = `${rect.left + rect.width/2}px`;
+                        tooltip.style.top = `${rect.top - 10}px`;
+                    }
+                });
+
+                cell.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+
+                cell.addEventListener('click', () => {
+                    document.querySelector('.day-cell.today')?.classList.remove('today');
+                    cell.classList.add('today');
+                    currentNepaliDay = parseInt(cell.dataset.nepaliDay);
+                    currentNepaliMonthNum = parseInt(cell.dataset.nepaliMonthNum);
+                    currentNepaliYear = parseInt(cell.dataset.nepaliYear);
+                    updateFormDropdowns();
+                    nepaliYearSelect.value = currentNepaliYear;
+                    nepaliMonthSelect.value = currentNepaliMonthNum;
+                    nepaliDaySelect.value = currentNepaliDay;
+                });
+            });
+        }
+    </script>
+</body>
+</html>

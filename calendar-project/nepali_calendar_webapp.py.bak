@@ -1,0 +1,229 @@
+from flask import Flask, render_template, request
+import datetime
+
+app = Flask(__name__)
+
+# Reference dates
+BASE_ENGLISH = datetime.date(1943, 4, 14)  # Corresponds to 2000-01-01 BS
+BASE_NEPALI_YEAR = 2000
+BASE_NEPALI_MONTH = 1
+BASE_NEPALI_DAY = 1
+
+# Days in each Nepali month for years from 2000 BS onwards
+BS_DAYS_IN_MONTH = {
+    2000: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2001: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2002: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2003: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2004: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2005: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2006: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2007: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2008: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2009: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2010: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2011: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2012: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2013: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2014: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2015: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2016: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2017: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2018: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2019: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2020: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2021: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2022: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2023: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2024: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2025: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2026: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2027: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2028: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2029: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2030: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2031: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2032: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2033: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2034: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2035: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2036: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2037: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2038: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2039: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2040: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2041: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+    2042: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2043: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2044: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2045: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2046: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2047: [30, 32, 31, 32, 31, 31, 29, 30, 29, 30, 29, 31],
+    2048: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2049: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2050: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2051: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2052: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2053: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2054: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2055: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2056: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2057: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2058: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2059: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2060: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2061: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2062: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2063: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2064: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2065: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2066: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2067: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2068: [31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+    2069: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2070: [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2071: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2072: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2073: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2074: [30, 32, 31, 32, 31, 31, 29, 30, 29, 30, 29, 31],
+    2075: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2076: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2077: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2078: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+    2079: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2080: [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2081: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2082: [31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+    2083: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2084: [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+    2085: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+    2086: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+    2087: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+    2088: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+    2089: [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+    2090: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30]
+}
+# Nepali month names
+NEPALI_MONTHS = [
+    "Baishakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
+    "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
+]
+
+# Day names for Sunday-start calendar
+DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+def english_to_nepali(english_year, english_month, english_day):
+    """Convert an English date to a Nepali date."""
+    current_english = datetime.date(english_year, english_month, english_day)
+    days_diff = (current_english - BASE_ENGLISH).days
+
+    nepali_year = BASE_NEPALI_YEAR
+    nepali_month = BASE_NEPALI_MONTH
+    nepali_day = BASE_NEPALI_DAY
+
+    # Add days to the Nepali date
+    nepali_day += days_diff
+
+    while True:
+        days_in_month = BS_DAYS_IN_MONTH[nepali_year][nepali_month - 1]
+        if nepali_day > days_in_month:
+            nepali_day -= days_in_month
+            nepali_month += 1
+            if nepali_month > 12:
+                nepali_month = 1
+                nepali_year += 1
+        else:
+            break
+
+    return nepali_year, nepali_month, nepali_day
+
+def nepali_to_english(nepali_year, nepali_month, nepali_day):
+    """Convert a Nepali date to an English date."""
+    days_diff = 0
+
+    # Calculate days from BASE_NEPALI to the given BS date
+    for year in range(BASE_NEPALI_YEAR, nepali_year):
+        days_diff += sum(BS_DAYS_IN_MONTH[year])
+
+    days_diff += sum(BS_DAYS_IN_MONTH[nepali_year][:nepali_month - 1])
+    days_diff += nepali_day
+
+    # Calculate English date
+    english_date = BASE_ENGLISH + datetime.timedelta(days=days_diff)
+    return english_date.year, english_date.month, english_date.day
+
+def generate_nepali_calendar(nepali_year, nepali_month):
+    """Generate the Nepali calendar for a given year and month."""
+    days_in_month = BS_DAYS_IN_MONTH[nepali_year][nepali_month - 1]
+    nepali_month_name = NEPALI_MONTHS[nepali_month - 1]
+
+    # Find the first day of the Nepali month in AD
+    english_year, english_month, english_day = nepali_to_english(nepali_year, nepali_month, 1)
+    first_day = datetime.date(english_year, english_month, english_day)
+    # Use Python's weekday() (Monday=0, ..., Sunday=6)
+    first_day_weekday = first_day.weekday()
+
+    return nepali_month_name, list(range(1, days_in_month + 1)), first_day_weekday
+
+@app.route('/')
+def home():
+    """Display the current calendar."""
+    now = datetime.datetime.now()
+    english_year = now.year
+    english_month = now.strftime("%b")  # Convert to Jan-Dec format
+    english_day = now.day
+    current_english_date = datetime.date(now.year, now.month, now.day)
+
+    # Calculate current weekday in Sunday-start format
+    current_weekday_sunday_start = (current_english_date.weekday() + 1) % 7
+
+    nepali_year, nepali_month, nepali_day = english_to_nepali(now.year, now.month, now.day)
+    nepali_month_name, days, first_day_weekday = generate_nepali_calendar(nepali_year, nepali_month)
+
+    return render_template("calendar.html",
+                           english_year=english_year,
+                           english_month=english_month,  # Pass formatted month
+                           english_day=english_day,
+                           nepali_year=nepali_year,
+                           nepali_month=nepali_month_name,
+                           nepali_month_num=nepali_month,
+                           nepali_day=nepali_day,
+                           days=days,
+                           first_day_weekday=first_day_weekday,
+                           nepali_months=NEPALI_MONTHS,
+                           day_names=DAY_NAMES,
+                           current_weekday_sunday_start=current_weekday_sunday_start)
+
+@app.route('/custom', methods=['POST'])
+def custom_calendar():
+    """Display a custom calendar based on user input."""
+    nepali_year = int(request.form['nepali_year'])
+    nepali_month = int(request.form['nepali_month'])
+    nepali_day = int(request.form['nepali_day'])
+
+    english_year, english_month, english_day = nepali_to_english(nepali_year, nepali_month, nepali_day)
+    current_english_date = datetime.date(english_year, english_month, english_day)
+
+    # Convert month to Jan-Dec format
+    english_month = current_english_date.strftime("%b")
+
+    current_weekday_sunday_start = (current_english_date.weekday() + 1) % 7
+
+    nepali_month_name, days, first_day_weekday = generate_nepali_calendar(nepali_year, nepali_month)
+
+    return render_template("calendar.html",
+                           english_year=english_year,
+                           english_month=english_month,  # Pass formatted month
+                           english_day=english_day,
+                           nepali_year=nepali_year,
+                           nepali_month=nepali_month_name,
+                           nepali_month_num=nepali_month,
+                           nepali_day=nepali_day,
+                           days=days,
+                           first_day_weekday=first_day_weekday,
+                           nepali_months=NEPALI_MONTHS,
+                           day_names=DAY_NAMES,
+                           current_weekday_sunday_start=current_weekday_sunday_start)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

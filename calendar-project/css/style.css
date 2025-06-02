@@ -1,0 +1,293 @@
+/* css/style.css */
+
+/* General Body Styling for Perspective */
+body {
+    perspective: 1500px; /* Increased perspective for a deeper scene */
+    perspective-origin: center center;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--accent, #fff7e6);
+    /* Ensure no overflow hidden here if elements are supposed to pop out */
+    overflow-x: hidden; /* Prevent horizontal scroll from transforms */
+}
+
+/* Header and Navigation */
+header {
+    width: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease-out;
+    z-index: 20;
+    position: relative; /* Needed for z-index stacking context */
+}
+
+.nav-link {
+    display: block;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease-out, background-color 0.3s ease-out;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.nav-link:hover {
+    transform: rotateY(10deg) scale(1.05) translateZ(10px);
+    background-color: rgba(255, 255, 255, 0.2);
+    z-index: 10;
+}
+
+/* Calendar Header Styling */
+.calendar-header {
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    background-color: var(--accent, #fff7e6);
+    padding: 20px 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform-style: preserve-3d; /* Keep this for its own effect */
+    transition: transform 0.5s ease-out;
+    max-width: 700px;
+    width: 90%;
+    box-sizing: border-box;
+    color: var(--darkbody, #2d3748);
+    position: relative; /* Needed for z-index and 3D stacking context */
+    z-index: 10; /* Ensure it's above the calendar wrapper */
+}
+
+.calendar-header h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary, #ffb347);
+    margin-bottom: 10px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+}
+
+.calendar-header p {
+    font-size: 1.1rem;
+    color: var(--secondary, #ff7e5f);
+    font-weight: 500;
+}
+
+/* Month Selector Styling */
+.month-selector {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: 800px;
+    width: 90%;
+    box-sizing: border-box;
+    position: relative; /* Needed for z-index */
+    z-index: 9; /* Below calendar header, above calendar wrapper */
+}
+
+.month-selector form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.month-selector .date-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+}
+
+.month-selector .input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.month-selector label {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.month-selector input[type="number"],
+.month-selector select {
+    padding: 8px 12px;
+    border: 1px solid var(--border, #fcb69f);
+    border-radius: 5px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s ease;
+    width: 120px;
+}
+
+.month-selector input[type="number"]:focus,
+.month-selector select:focus {
+    border-color: var(--primary, #ffb347);
+    box-shadow: 0 0 0 3px rgba(255, 179, 71, 0.2);
+}
+
+.month-selector button[type="submit"] {
+    padding: 10px 20px;
+    background-color: var(--secondary, #ff7e5f);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(255, 126, 95, 0.3);
+}
+
+.month-selector button[type="submit"]:hover {
+    background-color: #ff6a4a;
+    transform: translateY(-2px);
+}
+
+/* Calendar Table Wrapper (for overall 3D effect) */
+.calendar-wrapper {
+    /* Critical: Add a perspective directly to the wrapper */
+    perspective: 800px; /* A local perspective for the calendar */
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease-out;
+    margin-bottom: 50px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    max-width: 800px;
+    width: 90%;
+    box-sizing: border-box;
+    padding: 20px;
+    position: relative; /* Crucial for proper z-index and 3D stacking context */
+    z-index: 5; /* Ensure it stacks correctly with other elements */
+    /* Ensure no overflow hidden here that would clip 3D transformed cells */
+    overflow: visible;
+}
+
+/* Calendar Table Styling */
+.calendar {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 5px;
+    table-layout: fixed;
+    font-family: 'Noto Sans', sans-serif;
+    /* Critical: Ensure the table itself preserves 3D transforms for its children */
+    transform-style: preserve-3d;
+    /* Optionally, give the table a slight initial rotation or translation */
+    /* transform: rotateX(5deg) translateY(0px) translateZ(0px); */
+}
+
+.calendar thead {
+    /* To apply preserve-3d to TH, it's often easier to make thead preserve it */
+    transform-style: preserve-3d;
+}
+
+.calendar tr {
+    /* Crucial for rows to behave in 3D */
+    transform-style: preserve-3d;
+}
+
+.calendar th {
+    background-color: var(--primary, #ffb347);
+    color: white;
+    padding: 12px 0;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    /* For th, you might want a subtle static 3D effect */
+    transform: translateZ(5px); /* Lift headers slightly */
+    transition: transform 0.3s ease;
+}
+
+.calendar td {
+    position: relative;
+    transform-style: preserve-3d; /* This is good */
+    transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, background-color 0.3s ease-out;
+    cursor: pointer;
+    border: 1px solid var(--border, #fcb69f);
+    border-radius: 8px;
+    text-align: center;
+    padding: 15px 0;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--darkbody, #2d3748);
+    /* Add a small initial translateZ to cells so they are already in 3D space */
+    transform: translateZ(0px); /* Start at 0, so hover can move them forward */
+}
+
+.calendar td:hover {
+    transform: translateY(-8px) translateZ(30px) scale(1.1); /* Increased translateZ */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    background-color: var(--secondary, #ff7e5f);
+    color: white;
+    z-index: 5;
+}
+
+/* Specific styling for today, Saturday, and Sunday for visual distinction */
+.calendar td.today {
+    background-color: var(--primary, #ffb347);
+    color: white;
+    font-weight: bold;
+    transform: translateY(-10px) translateZ(40px) scale(1.15); /* Even more pronounced for today */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border-color: var(--primary, #ffb347);
+    z-index: 6; /* Ensure today's cell is above hovered cells */
+}
+
+.calendar td.sat {
+    color: #007bff;
+    background-color: #e6f7ff;
+}
+
+.calendar td.sun {
+    color: #dc3545;
+    background-color: #ffe6e6;
+}
+
+/* Empty cells for padding */
+.calendar td:empty {
+    background-color: #f8f8f8;
+    cursor: default;
+    border: 1px dashed #ddd;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 768px) {
+    .calendar-header h2 {
+        font-size: 1.8rem;
+    }
+    .calendar-header p {
+        font-size: 1rem;
+    }
+    .month-selector form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .month-selector .input-group {
+        width: 100%;
+    }
+    .month-selector input[type="number"],
+    .month-selector select {
+        width: 100%;
+    }
+    .calendar th,
+    .calendar td {
+        font-size: 0.9rem;
+        padding: 10px 0;
+        height: 50px;
+    }
+}
