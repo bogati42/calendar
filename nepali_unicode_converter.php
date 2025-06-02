@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nepali Unicode Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for better Nepali display */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+        }
+        textarea {
+            resize: vertical; /* Allow vertical resizing */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-3xl border border-gray-200">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-8">
+            Nepali Unicode Converter
+        </h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <label for="romanInput" class="block text-lg font-semibold text-gray-700 mb-2">
+                    Romanized Nepali Input:
+                </label>
+                <textarea
+                    id="romanInput"
+                    class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm text-lg"
+                    rows="10"
+                    placeholder="Type Romanized Nepali here (e.g., 'namaste')"
+                ></textarea>
+            </div>
+            <div>
+                <label for="devanagariOutput" class="block text-lg font-semibold text-gray-700 mb-2">
+                    Devanagari Unicode Output:
+                </label>
+                <textarea
+                    id="devanagariOutput"
+                    class="w-full p-4 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 text-lg"
+                    rows="10"
+                    readonly
+                    placeholder="Converted Nepali Unicode will appear here.(e.g., 'नमस्ते')"
+                ></textarea>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <button
+                id="convertBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75"
+            >
+                Convert
+            </button>
+            <button
+                id="copyBtn"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75"
+            >
+                Copy Output
+            </button>
+            <button
+                id="clearBtn"
+                class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75"
+            >
+                Clear All
+            </button>
+        </div>
+
+        <div id="messageBox" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg hidden">
+            Text copied to clipboard!
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const romanInput = document.getElementById('romanInput');
+            const devanagariOutput = document.getElementById('devanagariOutput');
+            const convertBtn = document.getElementById('convertBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const messageBox = document.getElementById('messageBox');
+
+            // --- Disable Right-Click and Developer Tools Shortcuts ---
+            // These methods are for deterring casual users from viewing source code.
+            // They are not foolproof and can be bypassed by determined users.
+            document.addEventListener('contextmenu', event => event.preventDefault()); // Disable right-click
+
+            document.addEventListener('keydown', event => {
+                // Disable F12
+                if (event.key === 'F12') {
+                    event.preventDefault();
+                }
+                // Disable Ctrl+Shift+I (Inspect Element)
+                if (event.ctrlKey && event.shiftKey && event.key === 'I') {
+                    event.preventDefault();
+                }
+                // Disable Ctrl+U (View Page Source)
+                if (event.ctrlKey && event.key === 'U') {
+                    event.preventDefault();
+                }
+                // Disable Cmd+Option+I (Mac Inspect Element)
+                if (event.metaKey && event.altKey && event.key === 'I') {
+                    event.preventDefault();
+                }
+                // Disable Cmd+Option+U (Mac View Page Source)
+                if (event.metaKey && event.altKey && event.key === 'U') {
+                    event.preventDefault();
+                }
+            });
+
+
+            // --- Nepali Unicode Conversion Logic ---
+            // This is a rule-based converter. It uses a map of Romanized syllables/characters
+            // to Devanagari, and applies rules for implicit 'a' and halanta.
+
+            const finalMap = {
+                // Independent Vowels
+                "a": "अ", "aa": "आ", "i": "इ", "ee": "ई", "u": "उ", "uu": "ऊ", "oo": "ऊ", "ri": "ऋ", "e": "ए", "ai": "ऐ", "o": "ओ", "au": "औ",
+                "am": "अं", // Anusvara as independent vowel
+                "ah": "अः", // Visarga as independent vowel
+
+                // Consonants (base Devanagari form)
+                "k": "क", "kh": "ख", "g": "ग", "gh": "घ", "ng": "ङ",
+                "c": "च", "ch": "छ", "j": "ज", "jh": "झ", "ny": "ञ",
+                "t": "त", "th": "थ", "d": "द", "dh": "ध", "n": "न", // Dental
+                "T": "ट", "Th": "ठ", "D": "ड", "Dh": "ढ", "N": "ण", // Retroflex (capitalized for distinction)
+                "p": "प", "ph": "फ", "b": "ब", "bh": "भ", "m": "म",
+                "y": "य", "r": "र", "l": "ल", "v": "व", "w": "व", // 'w' maps to 'व'
+                "sh": "श", "s": "स", "h": "ह",
+
+                // Vowel Signs (to be appended to consonants)
+                "v_aa": "ा", "v_i": "ि", "v_ee": "ी", "v_u": "ु", "v_uu": "ू", "v_ri": "ृ", "v_e": "े", "v_ai": "ै", "v_o": "ो", "v_au": "ौ",
+
+                // Modifiers (Anusvara, Chandrabindu, Visarga) - for use after a consonant
+                "m_anusvara": "ं",
+                "n_chandrabindu": "ँ",
+                "h_visarga": "ः",
+
+                // Numbers (pass through)
+                "0": "०", "1": "१", "2": "२", "3": "३", "4": "४",
+                "5": "५", "6": "६", "7": "७", "8": "८", "9": "९",
+
+                // Punctuation and special symbols
+                ".": "।", // Nepali Full Stop (Devanagari Danda)
+                ",": ",",
+                "!": "!",
+                "?": "?",
+                ":": ":",
+                ";": ";",
+                "(": "(", ")": ")",
+                "[": "[", "]" : "]",
+                "{": "{", "}": "}",
+                "-": "-", "_": "_",
+                "=": "=", "+": "+",
+                "/": "/", "\\": "\\",
+                "|": "|", // Vertical bar
+                "`": "`", "~": "~",
+                "@": "@", "#": "#", "$": "$",
+                "%": "%", "^": "^", "&": "&", "*": "*",
+                "<": "<", ">": ">",
+                "'": "'", "\"": "\"",
+                " ": " ", "\n": "\n", "\t": "\t",
+            };
+
+            // Conjuncts map (these are special cases that override basic consonant/vowel rules)
+            // Sorted by length descending for greedy matching.
+            const conjunctsMap = {
+                // Specific symbols and common multi-character Romanizations
+                "om": "ॐ", // Sacred syllable Om
+                "||": "॥", // Double danda
+                "s'": "ऽ", // Avagraha (apostrophe for elision)
+
+                // Common two-letter conjuncts and double consonants
+                "kya": "क्या", "kra": "क्र", "ksh": "क्ष", "gya": "ज्ञ", "tra": "त्र", "shra": "श्र",
+                "dya": "द्य", "dwa": "द्व", "chha": "छ", "tta": "त्त", "ddha": "द्ध", "nna": "न्न",
+                "nda": "न्द", "nta": "न्त", "mta": "म्त", "bha": "भ", "hya": "ह्य",
+                "chhya": "छ्या", "tya": "त्या", "dhy": "ध्य", "bhy": "भ्य",
+                "stha": "स्थ", "hri": "हृ", "swastha": "स्वस्थ",
+                "nkh": "ङ्ख", "ngh": "ङ्घ", "nch": "ञ्च", "njh": "ञ्झ", "nt": "न्त", "nth": "न्थ",
+                "nd": "न्द", "ndh": "न्ध", "np": "न्प", "nb": "न्ब", "nm": "न्म",
+                "mm": "म्म", "yy": "य्य", "rr": "र्र", "ll": "ल्ल", "vv": "व्व",
+                "shch": "श्च", "shn": "श्न", "shr": "श्र", "spl": "स्प्ल",
+                "hnu": "ह्नु", "hla": "ह्ला", "hli": "ह्ली",
+                "ddh": "द्ध", // For words like 'buddha'
+                "nn": "न्न", // For words like 'anna'
+                "mm": "म्म", // For words like 'amma'
+                "pp": "प्प", // For words like 'appa'
+                "bb": "ब्ब", // For words like 'abba'
+                "tt": "त्त", // For words like 'patta'
+                "dd": "द्द", // For words like 'add'
+                "kk": "क्क", // For words like 'pakka'
+                "gg": "ग्ग", // For words like 'lagga'
+                "bhya": "भ्य", "mya": "म्य", "rya": "र्य", "lpa": "ल्प", "lka": "ल्क",
+                "shya": "श्य", "sya": "स्य", "hva": "ह्व",
+                "jna": "ज्ञ", // Alternative for gya
+                "chhya": "छ्या", // For 'chhyal'
+                "shr": "श्र", // For 'shram'
+                "tr": "त्र", // For 'patra'
+                "dr": "द्र", // For 'indra'
+                "dhr": "ध्र", // For 'dharma'
+                "bhr": "भ्र", // For 'bhram'
+                "mr": "म्र", // For 'amra'
+                "vr": "व्र", // For 'vrat'
+                "sr": "स्र", // For 'srot'
+                "hl": "ह्ल", // For 'ahlad'
+                "hn": "ह्न", // For 'chinna'
+                "hm": "ह्म", // For 'brahma'
+                "hy": "ह्य", // For 'sahitya'
+                "shya": "श्य", // For 'bishaya'
+                "sya": "स्य", // For 'syaal'
+                "hva": "ह्व", // For 'ahwan'
+                "ksha": "क्ष", // Another common way to type ksh
+                "dhn": "ध्न", "bhn": "भ्न", "tma": "त्म", "dma": "द्म",
+                "rth": "र्थ", "rgya": "र्ग्य", "rva": "र्व",
+                "kkh": "क्ख", "ggh": "ग्घ", "cch": "च्छ", "jjh": "ज्झ",
+                "tth": "ट्ठ", "ddh": "ड्ढ", "nnh": "ण्ढ",
+                "tth": "त्थ", "ddh": "द्ध", "nnh": "न्ह", // Dental double consonants
+                "pph": "प्फ", "bbh": "ब्भ",
+                "yy": "य्य", "rr": "र्र", "ll": "ल्ल", "vv": "व्व",
+                "ss": "स्स", "hh": "ह्ह",
+                // More specific conjuncts and common typing patterns
+                "kri": "क्रि", "gri": "ग्रि", "pri": "प्रि", "bri": "ब्रि",
+                "tru": "त्रु", "dru": "द्रु",
+                "shri": "श्रि",
+                "nkr": "ङ्क्र", "ngr": "ङ्ग्र", "nch": "ञ्च", "nj": "ञ्ज",
+                "ntr": "न्त्र", "ndr": "न्द्र",
+                "mpr": "म्प्र", "mbr": "म्ब्र",
+                "hli": "ह्ली", "hlu": "ह्लु",
+                "rm": "र्म", // For 'dharma' -> 'धर्म'
+                "rka": "र्क", "rga": "र्ग", "rcha": "र्च", "rja": "र्ज",
+                "rta": "र्ट", "rTha": "र्थ", "rDa": "र्ड", "rDha": "र्ढ",
+                "rna": "र्ण", "rta": "र्त", "rtha": "र्थ", "rda": "र्द",
+                "rdha": "र्ध", "rna": "र्न", "rpa": "र्प", "rpha": "र्फ",
+                "rba": "र्ब", "rbha": "र्भ", "rma": "र्म", "rya": "र्य",
+                "rla": "र्ल", "rva": "र्व", "rsha": "र्श", "rsha": "र्ष",
+                "rsa": "र्स", "rha": "र्ह",
+                "kya": "क्या", "khya": "ख्या", "gya": "ग्य", "ghya": "घ्य",
+                "chya": "च्य", "chhya": "छ्य", "jya": "ज्य", "jhya": "झ्य",
+                "tya": "त्य", "thya": "थ्य", "dya": "द्य", "dhya": "ध्य", "nya": "न्य",
+                "pya": "प्य", "phya": "फ्य", "bya": "ब्य", "bhya": "भ्य", "mya": "म्य",
+                "lya": "ल्य", "vya": "व्य", "shya": "श्य", "sya": "स्य", "hya": "ह्य",
+                "kru": "क्रु", "gru": "ग्रु", "pru": "प्रु", "bru": "ब्रु",
+                "nka": "ङ्क", "nga": "ङ्ग", "nca": "ञ्च", "nja": "ञ्ज",
+                "nta": "ण्ट", "nda": "ण्ड", "nDa": "ण्र",
+                "ntaa": "न्टा", "ndaa": "न्डा",
+                "ntha": "न्थ", "ndha": "न्ध",
+                "mpa": "म्प", "mba": "म्ब",
+                "shma": "श्म", "shya": "श्य", "shwa": "श्व",
+                "sma": "स्म", "sya": "स्य", "swa": "स्व",
+                "hma": "ह्म", "hy": "ह्य", "hla": "ह्ल", "hva": "ह्व", "hna": "ह्न",
+            };
+
+            // Helper sets for quick lookup
+            const romanVowelsSet = new Set(["a", "aa", "i", "ee", "u", "uu", "oo", "ri", "e", "ai", "o", "au"]); // Removed "am", "ah"
+            const romanConsonantsSet = new Set([
+                "k", "kh", "g", "gh", "ng", "c", "ch", "j", "jh", "ny",
+                "t", "th", "d", "dh", "n", "T", "Th", "D", "Dh", "N", // Both dental and retroflex base forms
+                "p", "ph", "b", "bh", "m", "y", "r", "l", "v", "w",
+                "sh", "s", "h"
+                // Removed "x", "gy" from here as they are handled as conjuncts
+            ]);
+            const romanModifiersSet = new Set(["m", "n", "h"]); // For anusvara, chandrabindu, visarga
+
+            // Create a sorted list of all possible Roman segments for greedy matching
+            const allSegments = [];
+
+            // Add conjuncts first (e.g., "kya", "ksh", "om", "||", "s'")
+            Object.keys(conjunctsMap).forEach(segment => allSegments.push(segment));
+
+            // Add multi-character roman consonants (e.g., "kh", "sh", "Th")
+            Array.from(romanConsonantsSet)
+                .filter(c => c.length > 1)
+                .forEach(segment => allSegments.push(segment));
+
+            // Add multi-character roman vowels (e.g., "aa", "ee")
+            Array.from(romanVowelsSet)
+                .filter(v => v.length > 1)
+                .forEach(segment => allSegments.push(segment));
+
+            // Add single-character roman consonants (e.g., "k", "g")
+            Array.from(romanConsonantsSet)
+                .filter(c => c.length === 1)
+                .forEach(segment => allSegments.push(segment));
+
+            // Add single-character roman vowels (e.g., "a", "i")
+            Array.from(romanVowelsSet)
+                .filter(v => v.length === 1)
+                .forEach(segment => allSegments.push(segment));
+
+            // Add other single characters (numbers, punctuation, modifiers like 'm', 'n', 'h' if not already covered as consonants)
+            Object.keys(finalMap).forEach(key => {
+                if (key.length === 1 && !romanVowelsSet.has(key) && !romanConsonantsSet.has(key) && !romanModifiersSet.has(key)) {
+                    allSegments.push(key);
+                }
+            });
+
+            // Add modifiers like 'm', 'n', 'h' at the end to be handled explicitly
+            romanModifiersSet.forEach(mod => allSegments.push(mod));
+
+            // Finally, sort all segments by length in descending order to ensure longest match first
+            allSegments.sort((a, b) => b.length - a.length);
+
+
+            function convertRomanToDevanagari(romanText) {
+                const devanagariParts = [];
+                let i = 0;
+                const lowerRomanText = romanText.toLowerCase();
+
+                while (i < lowerRomanText.length) {
+                    let matchedSegment = "";
+                    let segmentLength = 0;
+                    let segmentType = ""; // "conjunct", "vowel", "consonant", "modifier", "other"
+
+                    // Find the longest matching Roman segment
+                    for (const segment of allSegments) {
+                        if (lowerRomanText.substring(i, i + segment.length) === segment) {
+                            matchedSegment = segment;
+                            segmentLength = segment.length;
+                            if (conjunctsMap[matchedSegment]) {
+                                segmentType = "conjunct";
+                            } else if (romanVowelsSet.has(matchedSegment)) {
+                                segmentType = "vowel";
+                            } else if (romanConsonantsSet.has(matchedSegment)) {
+                                segmentType = "consonant";
+                            } else if (romanModifiersSet.has(matchedSegment)) {
+                                segmentType = "modifier";
+                            } else {
+                                segmentType = "other"; // Punctuation, numbers, etc.
+                            }
+                            break; // Longest match found
+                        }
+                    }
+
+                    if (matchedSegment) {
+                        if (segmentType === "conjunct") {
+                            devanagariParts.push(conjunctsMap[matchedSegment]);
+                            i += segmentLength;
+                        } else if (segmentType === "vowel") {
+                            // If the last part was a consonant, apply as vowel sign
+                            const lastPart = devanagariParts[devanagariParts.length - 1];
+                            const lastDevanagariChar = lastPart ? lastPart.slice(-1) : ''; // Get last Devanagari character
+                            const isLastCharConsonant = "कखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह".includes(lastDevanagariChar);
+
+                            if (isLastCharConsonant && devanagariParts.length > 0) {
+                                // Remove halanta if present on the last consonant
+                                if (lastPart.endsWith("्")) {
+                                    devanagariParts[devanagariParts.length - 1] = lastPart.slice(0, -1);
+                                }
+                                // Apply vowel sign
+                                if (matchedSegment !== "a") { // 'a' is implicit, no matra
+                                    devanagariParts[devanagariParts.length - 1] += finalMap["v_" + matchedSegment];
+                                }
+                            } else {
+                                // Independent vowel
+                                devanagariParts.push(finalMap[matchedSegment]);
+                            }
+                            i += segmentLength;
+                        } else if (segmentType === "consonant") {
+                            let devanagariConsonant = finalMap[matchedSegment];
+                            let nextCursor = i + segmentLength;
+                            let nextRomanSegment = "";
+
+                            // Look ahead for the next Roman segment
+                            for (const segment of allSegments) {
+                                if (lowerRomanText.substring(nextCursor, nextCursor + segment.length) === segment) {
+                                    nextRomanSegment = segment;
+                                    break;
+                                }
+                            }
+
+                            if (romanVowelsSet.has(nextRomanSegment)) {
+                                // Consonant followed by a vowel (e.g., 'ka', 'ki', 'kaa')
+                                if (nextRomanSegment === "a") {
+                                    // Implicit 'a', just add the consonant
+                                    devanagariParts.push(devanagariConsonant);
+                                } else {
+                                    // Explicit vowel, add vowel sign
+                                    devanagariParts.push(devanagariConsonant + finalMap["v_" + nextRomanSegment]);
+                                }
+                                i += segmentLength + nextRomanSegment.length;
+                            } else if (romanConsonantsSet.has(nextRomanSegment) || conjunctsMap[nextRomanSegment]) {
+                                // Consonant followed by another consonant or a conjunct (forms a cluster, needs halanta)
+                                devanagariParts.push(devanagariConsonant + "्");
+                                i += segmentLength;
+                            } else if (romanModifiersSet.has(nextRomanSegment)) {
+                                // Consonant followed by a modifier (e.g., 'ram', 'ran')
+                                devanagariParts.push(devanagariConsonant); // Add consonant, modifier will be handled next
+                                i += segmentLength;
+                            }
+                            else {
+                                // Consonant at the end of input or followed by punctuation/space/unknown.
+                                // Implicit 'a' is assumed (no halanta).
+                                devanagariParts.push(devanagariConsonant);
+                                i += segmentLength;
+                            }
+                        } else if (segmentType === "modifier") {
+                            // Modifiers (anusvara, chandrabindu, visarga)
+                            if (matchedSegment === 'm') {
+                                devanagariParts.push(finalMap["m_anusvara"]);
+                            } else if (matchedSegment === 'n') {
+                                devanagariParts.push(finalMap["n_chandrabindu"]);
+                            } else if (matchedSegment === 'h') {
+                                devanagariParts.push(finalMap["h_visarga"]);
+                            }
+                            i += segmentLength;
+                        } else if (segmentType === "other") {
+                            // Other mapped characters (numbers, punctuation)
+                            devanagariParts.push(finalMap[matchedSegment]);
+                            i += segmentLength;
+                        }
+                    } else {
+                        // No match found, append original character (e.g., space, unknown char)
+                        devanagariParts.push(lowerRomanText[i]);
+                        i++;
+                    }
+                }
+
+                let devanagariResult = devanagariParts.join("");
+
+                // Final cleanup: remove redundant halantas (e.g., 'क्ा' should be 'का')
+                devanagariResult = devanagariResult.replace(/्(ा|ि|ी|ु|ू|ृ|े|ै|ो|ौ)/g, "$1");
+
+                // Post-processing for implicit 'a' at the end of words or before spaces/punctuation
+                // This regex now specifically targets a consonant followed by a halanta,
+                // then a word boundary or space/punctuation, and removes the halanta.
+                devanagariResult = devanagariResult.replace(/([कखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह])्(?=[\s.,!?;:()\[\]{}_\-+=/\\|`~@#$%^&*<>"']|$)/g, "$1");
+
+
+                return devanagariResult;
+            }
+
+            // --- Event Listeners ---
+
+            // Convert button click
+            convertBtn.addEventListener('click', () => {
+                const romanText = romanInput.value;
+                const convertedText = convertRomanToDevanagari(romanText);
+                devanagariOutput.value = convertedText;
+            });
+
+            // Live conversion as user types (optional, but good for user experience)
+            romanInput.addEventListener('input', () => {
+                const romanText = romanInput.value;
+                const convertedText = convertRomanToDevanagari(romanText);
+                devanagariOutput.value = convertedText;
+            });
+
+            // Copy button click
+            copyBtn.addEventListener('click', () => {
+                devanagariOutput.select();
+                document.execCommand('copy'); // Use execCommand for broader compatibility in iframes
+                showMessageBox();
+            });
+
+            // Clear button click
+            clearBtn.addEventListener('click', () => {
+                romanInput.value = '';
+                devanagariOutput.value = '';
+            });
+
+            // Function to show the message box
+            function showMessageBox() {
+                messageBox.classList.remove('hidden');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 2000); // Hide after 2 seconds
+            }
+        });
+    </script>
+</body>
+</html>
+

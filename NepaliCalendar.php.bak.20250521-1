@@ -1,0 +1,398 @@
+<?php
+
+class NepaliCalendar {
+    private $bs = [
+        [2000, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2001, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2002, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2003, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2004, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2005, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2006, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2007, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2008, 31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        [2009, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2010, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2011, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2012, 31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        [2013, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2014, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2015, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2016, 31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        [2017, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2018, 31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2019, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2020, 31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2021, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2022, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        [2023, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2024, 31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2025, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2026, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2027, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2028, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2029, 31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+        [2030, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2031, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2032, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2033, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2034, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2035, 30, 32, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        [2036, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2037, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2038, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2039, 31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        [2040, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2041, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2042, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2043, 31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        [2044, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2045, 31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2046, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2047, 31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2048, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2049, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        [2050, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2051, 31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2052, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2053, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        [2054, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2055, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2056, 31, 31, 32, 31, 32, 30, 30, 29, 30, 29, 30, 30],
+        [2057, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2058, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2059, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2060, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2061, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2062, 30, 32, 31, 32, 31, 31, 29, 30, 29, 30, 29, 31],
+        [2063, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2064, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2065, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2066, 31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 29, 31],
+        [2067, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2068, 31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2069, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2070, 31, 31, 31, 32, 31, 31, 29, 30, 30, 29, 30, 30],
+        [2071, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2072, 31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
+        [2073, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31],
+        [2074, 31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2075, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2076, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        [2077, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2078, 31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2079, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2080, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        [2081, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+        [2082, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2083, 31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+        [2084, 31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
+        [2085, 31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        [2086, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        [2087, 31, 31, 32, 31, 31, 31, 30, 30, 29, 30, 30, 30],
+        [2088, 30, 31, 32, 32, 30, 31, 30, 30, 29, 30, 30, 30],
+        [2089, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+        [2090, 30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
+    ];
+
+    private $ad_to_bs = [
+        [1943, 4, 14, 2000, 1, 1],
+        [2025, 4, 14, 2082, 1, 1]
+    ];
+
+    private $nepali_numbers = [
+        0 => '०', 1 => '१', 2 => '२', 3 => '३', 4 => '४',
+        5 => '५', 6 => '६', 7 => '७', 8 => '८', 9 => '९'
+    ];
+
+    private $nep_months = [
+        1 => 'बैशाख', 2 => 'जेठ', 3 => 'असार', 4 => 'श्रावण',
+        5 => 'भदौ', 6 => 'असोज', 7 => 'कार्तिक', 8 => 'मंसिर',
+        9 => 'पुष', 10 => 'माघ', 11 => 'फागुन', 12 => 'चैत'
+    ];
+
+    private $nep_days = [
+        1 => 'आइतबार', 2 => 'सोमबार', 3 => 'मंगलबार', 4 => 'बुधबार',
+        5 => 'बिहिबार', 6 => 'शुक्रबार', 7 => 'शनिबार'
+    ];
+
+    public function getCurrentBSDate() {
+        $today = new DateTime('now', new DateTimeZone('Asia/Kathmandu'));
+        $ad_year = (int)$today->format('Y');
+        $ad_month = (int)$today->format('m');
+        $ad_day = (int)$today->format('d');
+
+        return $this->convertADtoBS($ad_year, $ad_month, $ad_day);
+    }
+
+    private function convertADtoBS($ad_year, $ad_month, $ad_day) {
+        $ref = $this->findClosestReference($ad_year);
+        $days_diff = $this->countDaysDifference(
+            $ref[0], $ref[1], $ref[2],
+            $ad_year, $ad_month, $ad_day
+        );
+
+        return $this->addDaysToBS($ref[3], $ref[4], $ref[5], $days_diff);
+    }
+
+    private function findClosestReference($ad_year) {
+        $closest_ref = $this->ad_to_bs[0];
+        foreach ($this->ad_to_bs as $ref) {
+            if ($ad_year >= $ref[0]) {
+                $closest_ref = $ref;
+            }
+        }
+        return $closest_ref;
+    }
+
+    private function countDaysDifference($from_year, $from_month, $from_day,
+                                         $to_year, $to_month, $to_day) {
+        $from_jd = gregoriantojd($from_month, $from_day, $from_year);
+        $to_jd = gregoriantojd($to_month, $to_day, $to_year);
+        return $to_jd - $from_jd;
+    }
+
+    private function addDaysToBS($year, $month, $day, $days_to_add) {
+        while ($days_to_add > 0) {
+            $day++;
+            $days_to_add--;
+
+            $year_index = array_search($year, array_column($this->bs, 0));
+            if ($year_index === false) {
+                // If year not found, default to the last year in the table to prevent errors
+                $year_index = array_search(2090, array_column($this->bs, 0));
+            }
+            if ($day > $this->bs[$year_index][$month]) {
+                $month++;
+                $day = 1;
+                if ($month > 12) {
+                    $year++;
+                    $month = 1;
+                }
+            }
+        }
+
+        return ['year' => $year, 'month' => $month, 'day' => $day];
+    }
+
+    private function convertToNepaliNumeral($number) {
+        $nepali_number = '';
+        $number_str = (string)$number;
+
+        for ($i = 0; $i < strlen($number_str); $i++) {
+            $nepali_number .= $this->nepali_numbers[(int)$number_str[$i]];
+        }
+
+        return $nepali_number;
+    }
+
+    public function getCalendarHTML($year = null, $month = null) {
+        if (!$year || !$month) {
+            $current_date = $this->getCurrentBSDate();
+            $year = $current_date['year'];
+            $month = $current_date['month'];
+        }
+
+        $current_date = $this->getCurrentBSDate();
+        $holidays = [];
+        $calendar = '';
+        try {
+            // Ensure holidays_2082.php returns an array directly, e.g., `return [...];`
+            $holidays = include 'holidays_2082.php';
+            if (!is_array($holidays) || empty($holidays)) {
+                error_log('NepaliCalendar: No holidays loaded or invalid format from holidays_2082.php');
+            } else {
+                error_log('NepaliCalendar: ' . count($holidays) . ' holidays loaded successfully');
+            }
+        } catch (Exception $e) {
+            error_log('NepaliCalendar: Failed to include holidays_2082.php: ' . $e->getMessage());
+        }
+
+        $calendar .= "<div class='calendar'>";
+        $calendar .= $this->generateNavigation($year, $month);
+        $calendar .= $this->generateDaysHeader();
+        // Updated to include 'calendar-grid' class for consistent styling and JS targeting
+        $calendar .= "<div class='calendar-grid'>";
+        $calendar .= $this->generateCalendarGridContent($year, $month, $current_date, $holidays);
+        $calendar .= "</div>"; // Close calendar-grid
+        $calendar .= "</div>"; // Close calendar
+        return $calendar;
+    }
+
+    private function generateNavigation($year, $month) {
+        $prev_month = $month - 1;
+        $prev_year = $year;
+        if ($prev_month < 1) {
+            $prev_month = 12;
+            $prev_year--;
+        }
+
+        $next_month = $month + 1;
+        $next_year = $year;
+        if ($next_month > 12) {
+            $next_month = 1;
+            $next_year++;
+        }
+
+        $nav = "<div class='navigation'>";
+        $nav .= "<button onclick='changeMonth($prev_year, $prev_month)'>&lt;</button>"; // Use HTML entity for left arrow
+        $nepali_year = $this->convertToNepaliNumeral($year);
+        $nav .= "<h2>{$this->nep_months[$month]} $nepali_year</h2>";
+        $nav .= "<button onclick='changeMonth($next_year, $next_month)'>&gt;</button>"; // Use HTML entity for right arrow
+        $nav .= "</div>";
+
+        return $nav;
+    }
+
+    private function generateDaysHeader() {
+        $header = "<div class='days-header'>";
+        foreach ($this->nep_days as $day) {
+            $header .= "<div class='day-name'>$day</div>";
+        }
+        $header .= "</div>";
+        return $header;
+    }
+
+    // Renamed this method to emphasize it generates grid content
+    private function generateCalendarGridContent($year, $month, $current_date, $holidays) {
+        $grid = "<div class='days'>"; // This div already has the 'days' class
+
+        // Calculate the first day of the month (0 for Sunday, 6 for Saturday)
+        // Convert BS year/month/day (1st day) to AD to get the weekday
+        $first_day_ad = $this->convertBStoAD($year, $month, 1);
+        $first_day_of_week = jddayofweek(gregoriantojd($first_day_ad['month'], $first_day_ad['day'], $first_day_ad['year']), 0); // 0 = Sunday, 1 = Monday ... 6 = Saturday
+
+        // Add empty cells for padding at the beginning of the month
+        // Adjust if your week starts on Sunday (0) or Monday (1)
+        // Assuming your `nep_days` array implies Sunday is the first day (index 1 for 'आइतबार')
+        // If your week starts on Monday, adjust `+ 1` or `(first_day_of_week + 6) % 7`
+        for ($i = 0; $i < $first_day_of_week; $i++) {
+            $grid .= "<div class='day empty'></div>";
+        }
+
+        $year_index = array_search($year, array_column($this->bs, 0));
+        if ($year_index === false) {
+            $year_index = array_search(2090, array_column($this->bs, 0)); // Fallback
+        }
+        $total_days = $this->bs[$year_index][$month];
+
+        for ($day = 1; $day <= $total_days; $day++) {
+            $class = 'day';
+
+            // Convert current BS day to AD to get the English date and check for today/holiday
+            $current_bs_date_array = ['year' => $year, 'month' => $month, 'day' => $day];
+            $ad_date_for_day = $this->convertBStoAD($year, $month, $day);
+
+            // English date in YYYY-MM-DD format for data attribute
+            $english_date_iso = sprintf('%04d-%02d-%02d', $ad_date_for_day['year'], $ad_date_for_day['month'], $ad_date_for_day['day']);
+
+            // Check if it's today's date
+            if ($year === $current_date['year'] &&
+                $month === $current_date['month'] &&
+                $day === $current_date['day']) {
+                $class .= ' today';
+            }
+
+            // Check for holidays
+            $holiday_name = '';
+            foreach ($holidays as $holiday) {
+                // Ensure array keys exist before accessing
+                if (isset($holiday['bs_date']['year']) && isset($holiday['bs_date']['month']) && isset($holiday['bs_date']['day'])) {
+                    $h_year = (int)$holiday['bs_date']['year'];
+                    $h_month = (int)$holiday['bs_date']['month'];
+                    $h_day = (int)$holiday['bs_date']['day'];
+
+                    if ($h_year === $year && $h_month === $month && $h_day === $day) {
+                        $class .= ' holiday';
+                        $holiday_name = htmlspecialchars($holiday['name']);
+                        break; // Found holiday for this day, no need to check others
+                    }
+                } else {
+                    error_log("NepaliCalendar: Invalid holiday data structure for holiday: " . json_encode($holiday));
+                }
+            }
+
+            $nepali_day = $this->convertToNepaliNumeral($day);
+            // Format English date for display (e.g., "May 21")
+            $english_date_display = date("M j", mktime(0, 0, 0, $ad_date_for_day['month'], $ad_date_for_day['day'], $ad_date_for_day['year']));
+
+
+            // THIS IS THE CRUCIAL LINE FOR THE TOOLTIP
+            // Add the data-english-date attribute
+            $grid .= "<div class='$class' data-english-date='{$english_date_iso}'>";
+            $grid .= "<span class='nepali-day-number'>$nepali_day</span>";
+            $grid .= "<span class='english-day-number'>$english_date_display</span>";
+            if ($holiday_name) {
+                $grid .= "<div class='holiday-name'>$holiday_name</div>";
+            }
+            $grid .= "</div>";
+        }
+
+        // Add empty cells for padding at the end of the month to complete the grid
+        // The total number of cells should be a multiple of 7 (e.g., 5 weeks = 35 cells, 6 weeks = 42 cells)
+        $total_cells = $first_day_of_week + $total_days;
+        $remaining_cells = (7 - ($total_cells % 7)) % 7;
+        for ($i = 0; $i < $remaining_cells; $i++) {
+            $grid .= "<div class='day empty'></div>";
+        }
+
+        $grid .= "</div>"; // Close .days
+        return $grid;
+    }
+
+    // Removed calculateFirstDay method as its logic is now inline in generateCalendarGridContent for clarity
+
+    private function convertBStoAD($bs_year, $bs_month, $bs_day) {
+        $ref = $this->findClosestReferenceBS($bs_year, $bs_month, $bs_day); // Adjusted to find closest BS reference
+        $days_diff = 0;
+
+        // Calculate days from reference BS date to target BS date
+        for ($y = $ref[3]; $y < $bs_year; $y++) {
+            $idx = array_search($y, array_column($this->bs, 0));
+            if ($idx === false) {
+                $idx = array_search(2090, array_column($this->bs, 0)); // Fallback
+            }
+            for ($m = 1; $m <= 12; $m++) {
+                $days_diff += $this->bs[$idx][$m];
+            }
+        }
+
+        $year_index = array_search($bs_year, array_column($this->bs, 0));
+        if ($year_index === false) {
+            $year_index = array_search(2090, array_column($this->bs, 0)); // Fallback
+        }
+        for ($m = 1; $m < $bs_month; $m++) {
+            $days_diff += $this->bs[$year_index][$m];
+        }
+
+        $days_diff += ($bs_day - 1);
+
+        // Convert reference AD date to Julian Day, add difference, then convert back to Gregorian
+        $jd = gregoriantojd($ref[1], $ref[2], $ref[0]) + $days_diff;
+        $ad_date = jdtogregorian($jd);
+        list($month, $day, $year) = explode('/', $ad_date);
+
+        return [
+            'year' => (int)$year,
+            'month' => (int)$month,
+            'day' => (int)$day
+        ];
+    }
+
+    // New helper method to find the closest BS reference in AD_to_BS mapping
+    private function findClosestReferenceBS($bs_year, $bs_month, $bs_day) {
+        $closest_ref = $this->ad_to_bs[0]; // Start with the first reference
+        foreach ($this->ad_to_bs as $ref) {
+            // If the target BS date is after or equal to this reference BS date
+            if (
+                $bs_year > $ref[3] ||
+                ($bs_year === $ref[3] && $bs_month > $ref[4]) ||
+                ($bs_year === $ref[3] && $bs_month === $ref[4] && $bs_day >= $ref[5])
+            ) {
+                $closest_ref = $ref;
+            }
+        }
+        return $closest_ref;
+    }
+}
+?>

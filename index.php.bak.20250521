@@ -1,0 +1,252 @@
+<?php require_once 'NepaliCalendar.php'; ?>
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>नेपाली पात्रो</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="calendarContainer">
+            <?php
+            if (!class_exists('NepaliCalendar')) {
+                echo "<p style='color:red;'>Error: NepaliCalendar class not found. Please ensure NepaliCalendar.php is included and correct.</p>";
+            } else {
+                $calendar = new NepaliCalendar();
+                $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
+                $month = isset($_GET['month']) ? (int)$_GET['month'] : null;
+                if (method_exists($calendar, 'getCalendarHTML')) {
+                    echo $calendar->getCalendarHTML($year, $month);
+                } else {
+                    echo "<p style='color:red;'>Error: getCalendarHTML method not found in NepaliCalendar class.</p>";
+                }
+            }
+            ?>
+	</div>
+	<div class="sidebar">
+            <div class="weather-info">
+                <h3>Current Weather</h3>
+                <div id="weatherForecast">
+                    <p>Loading weather...</p>
+                </div>
+            </div>
+            <div class="date-info">
+                <h3>आजको मिति</h3>
+                <div id="currentDate">
+                </div>
+            </div>
+            <div id="nepaliClock" class="clock">Loading Nepali Time...</div>
+            <div class="date-converter">
+                <h4>Nepali ↔ English Date Converter</h4>
+                <h5>Nepali to English</h5>
+                <input type="text" id="nepaliDate" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}">
+                <button id="convertNepali">Convert</button>
+                <div id="nepResult" class="result"></div>
+                <h5>English to Nepali</h5>
+                <input type="date" id="englishDate">
+                <button id="convertEnglish">Convert</button>
+                <div id="engResult" class="result"></div>
+            </div>
+        </div>
+    </div>
+    <div id="loading">
+        <i class="fas fa-spinner fa-spin"></i> Loading...
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+$(document).ready(function () {
+    function updateCurrentDate() {
+        const now = new Date();
+        const englishDate = now.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long'
+        });
+
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const englishDateISO = `${year}-${month}-${day}`;
+
+        fetch('convert.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'engToNep', date: englishDateISO }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.result && data.result.formatted) {
+                $('#currentDate').html(`
+                    नेपाली मिति: ${data.result.formatted}<br>
+                    English Date: ${englishDate}
+                `);
+            } else {
+                $('#currentDate').html('Error fetching Nepali date.');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching Nepali date:', error);
+            $('#currentDate').html('Error loading date.');
+        });
+    }
+
+    updateCurrentDate();
+});
+
+    $(document).ready(function() {
+    // Function to highlight Saturdays
+    function highlightSaturdays() {
+        $('.days .day:not(.empty):nth-child(7n)').addClass('saturday');
+    }
+
+    // Apply initial highlighting
+    highlightSaturdays();
+
+    // Calendar navigation (modify to re-apply highlighting after update)
+    window.changeMonth = function(year, month) {
+        $('#loading').show();
+        $.ajax({
+            url: window.location.pathname,
+            method: 'GET',
+            data: { year: year, month: month },
+            success: function(response) {
+                const newCalendar = $(response).find('#calendarContainer').html();
+                $('#calendarContainer').html(newCalendar);
+                // Re-apply highlighting after calendar update
+                highlightSaturdays();
+                // Re-apply holiday styling (assuming your PHP adds 'holiday' class)
+                $('.days .day.holiday').css('background-color', '#ffcccb');
+            },
+            error: function(xhr, status, error) {
+                console.error('Calendar update failed:', status, error);
+                $('#calendarContainer').html('<p style="color:red;">Error loading calendar. Please try again.</p>');
+            },
+            complete: function() {
+                $('#loading').hide();
+            }
+        });
+    };
+
+    // Update Nepali time (NPT, UTC+5:45) starting from 10:37 AM JST (6:52 AM NPT)
+    function updateNepaliTime() {
+        const clockElement = document.getElementById('nepaliClock');
+        if (clockElement) {
+            // Start with provided JST time: 2025-05-20 10:37:00 +09:00
+            const jstDate = new Date('2025-05-20T10:37:00+09:00');
+            // Adjust to current time by calculating elapsed seconds
+            const now = new Date();
+            const elapsedMs = now - new Date('2025-05-20T10:37:00+09:00');
+            const nptDate = new Date(jstDate.getTime() + elapsedMs - (3 * 60 + 15) * 60 * 1000); // JST to NPT: subtract 3h15m
+
+            const hours = nptDate.getHours().toString().padStart(2, '0');
+            const minutes = nptDate.getMinutes().toString().padStart(2, '0');
+            const seconds = nptDate.getSeconds().toString().padStart(2, '0');
+
+            const nepaliNumeralsMap = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+            const toNepaliNumStr = (str) => str.split('').map(digit => nepaliNumeralsMap[parseInt(digit)] || digit).join('');
+
+            clockElement.textContent = `नेपाली समय: ${toNepaliNumStr(hours)}:${toNepaliNumStr(minutes)}:${toNepaliNumStr(seconds)}`;
+        }
+    }
+    setInterval(updateNepaliTime, 1000);
+    updateNepaliTime();
+
+    // Date converter
+    $('#convertNepali').click(function () {
+        const nepaliDate = $('#nepaliDate').val();
+        const resultDiv = $('#nepResult');
+        resultDiv.removeClass('success error').text('');
+
+        if (!nepaliDate || !/^\d{4}-\d{2}-\d{2}$/.test(nepaliDate)) {
+            resultDiv.text('Please enter a valid Nepali date (YYYY-MM-DD).').addClass('error');
+            return;
+        }
+
+        fetch('convert.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'nepToEng', date: nepaliDate }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                resultDiv.text(`Error: ${data.error}`).addClass('error');
+            } else if (data.result && data.result.formatted) {
+                resultDiv.text(`Converted Date: ${data.result.formatted}`).addClass('success');
+            } else {
+                resultDiv.text('Error: Conversion failed or invalid response.').addClass('error');
+            }
+        })
+        .catch(error => {
+            console.error('Conversion error:', error);
+            resultDiv.text('Error: Conversion request failed.').addClass('error');
+        });
+    });
+
+    $('#convertEnglish').click(function () {
+        const englishDate = $('#englishDate').val();
+        const resultDiv = $('#engResult');
+        resultDiv.removeClass('success error').text('');
+
+        if (!englishDate) {
+            resultDiv.text('Please enter a valid English date.').addClass('error');
+            return;
+        }
+
+        fetch('convert.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'engToNep', date: englishDate }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                resultDiv.text(`Error: ${data.error}`).addClass('error');
+            } else if (data.result && data.result.formatted) {
+                resultDiv.text(`Converted Date: ${data.result.formatted}`).addClass('success');
+            } else {
+                resultDiv.text('Error: Conversion failed or invalid response.').addClass('error');
+            }
+        })
+        .catch(error => {
+            console.error('Conversion error:', error);
+            resultDiv.text('Error: Conversion request failed.').addClass('error');
+        });
+    });
+            // Fetch Current Weather
+        const apiKey = '0105dc16459a4065b4a65815252005'; // Replace with your API key
+        const city = 'Kathmandu';
+        const apiUrl = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${city}&aqi=no`;
+
+        async function fetchWeather() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch weather data');
+                }
+                const data = await response.json();
+                const weatherInfo = `
+                    <p>स्थान: ${data.location.name}, ${data.location.region}</p>
+                    <p>🌡️ तापक्रम: ${data.current.temp_c}°C (महसुस: ${data.current.feelslike_c}°C)</p>
+                    <p>🌈 अवस्था: ${data.current.condition.text}</p>
+                    <p>💧 आर्द्रता: ${data.current.humidity}%</p>
+                    <p>💨 हावा गति: ${data.current.wind_kph} km/h</p>
+                    <img src="${data.current.condition.icon}" alt="${data.current.condition.text}">
+                `;
+                document.getElementById('weatherForecast').innerHTML = weatherInfo;
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                document.getElementById('weatherForecast').innerHTML = 'Error loading weather forecast.';
+            }
+        }
+        fetchWeather();
+        updateCurrentDate();
+});
+    </script>
+</body>
+</html>

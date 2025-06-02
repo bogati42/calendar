@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test 1 - Basic JS</title>
+    <style>
+        body { font-family: sans-serif; font-size: 24px; padding: 20px; }
+        #clockTimezoneLabel { color: blue; }
+        #debug-output { margin-top: 20px; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <div id="clockTimezoneLabel">Loading... (Debug 1)</div>
+    <div id="digital-time-main">--:--:--</div>
+    <div id="error-display" style="color: red; font-weight: bold;"></div>
+    <div id="debug-output">Debug Messages Will Appear Here:</div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        var debugOutput = document.getElementById('debug-output');
+        var errorDisplay = document.getElementById('error-display');
+
+        function logToScreen(message) {
+            console.log(message); // Keep console log too
+            if (debugOutput) {
+                debugOutput.innerHTML += "<br>" + new Date().toLocaleTimeString() + ": " + message;
+            }
+        }
+
+        window.onerror = function(message, source, lineno, colno, error) {
+            var errorMsg = "Uncaught Error: " + message + " at " + source + ":" + lineno;
+            console.error(errorMsg, error);
+            logToScreen("WINDOW.ONERROR: " + errorMsg);
+            if (errorDisplay) {
+                errorDisplay.textContent = errorMsg;
+            }
+            return true;
+        };
+
+        logToScreen("Script block started.");
+
+        if (typeof jQuery !== 'undefined') {
+            logToScreen("jQuery is loaded. Version: " + jQuery.fn.jquery);
+            $(document).ready(function() {
+                try {
+                    logToScreen("jQuery document.ready started.");
+                    $('#clockTimezoneLabel').text("jQuery Ready! Basic JS Works!");
+                    $('#digital-time-main').text(new Date().toLocaleTimeString());
+                    logToScreen("SUCCESS: Text updated by jQuery.");
+                } catch (e) {
+                    logToScreen("ERROR in document.ready: " + e.message);
+                    if (errorDisplay) errorDisplay.textContent = "ERROR in document.ready: " + e.message;
+                }
+            });
+        } else {
+            logToScreen("ERROR: jQuery is NOT loaded.");
+            if (errorDisplay) errorDisplay.textContent = "jQuery failed to load. Check Internet connection on TV.";
+            document.getElementById('clockTimezoneLabel').textContent = "jQuery Load Failed!";
+        }
+        logToScreen("Script block finished.");
+    </script>
+</body>
+</html>

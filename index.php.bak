@@ -1,0 +1,81 @@
+<?php
+require 'vendor/autoload.php';
+use Anuzpandey\LaravelNepaliDate\LaravelNepaliDate;
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nepali ↔ English Date Converter</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+	<h1>Radheshyam Bogati Presents</h1>
+        <h1>Nepali ↔ English Date Converter</h1>
+
+        <!-- Nepali to English -->
+        <div class="converter-box">
+            <h2>Nepali to English</h2>
+            <div class="input-group">
+                <input type="text" id="nepaliDate" placeholder="YYYY-MM-DD">
+                <button onclick="convertDate('nepToEng')">Convert</button>
+            </div>
+            <div id="nepResult" class="result"></div>
+        </div>
+
+        <!-- English to Nepali -->
+        <div class="converter-box">
+            <h2>English to Nepali</h2>
+            <div class="input-group">
+                <input type="date" id="englishDate">
+                <button onclick="convertDate('engToNep')">Convert</button>
+            </div>
+            <div id="engResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+    function convertDate(type) {
+        const resultDiv = type === 'nepToEng'
+            ? document.getElementById('nepResult')
+            : document.getElementById('engResult');
+
+        const data = {
+            type: type,
+            date: type === 'nepToEng'
+                ? document.getElementById('nepaliDate').value
+                : document.getElementById('englishDate').value,
+            locale: 'ne', // Set to Nepali for the result
+            format: 'l, j F Y' // Adjust format as required
+        };
+
+        fetch('convert.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                resultDiv.style.backgroundColor = '#ffebee';
+                resultDiv.innerHTML = `Error: ${data.error}`;
+            } else {
+                resultDiv.style.backgroundColor = '#e8f5e9';
+                resultDiv.innerHTML = `
+                    <div>Converted Date: ${data.result.formatted}</div>
+                    ${data.result.details ? `<div>Details: ${JSON.stringify(data.result.details)}</div>` : ''}
+                `;
+            }
+        })
+        .catch(error => {
+            resultDiv.style.backgroundColor = '#ffebee';
+            resultDiv.innerHTML = 'Error: Connection failed';
+        });
+    }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Clock (JS) - webOS Friendly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta+Vaani:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            /* Color Palette & Sizing Variables */
+            --sakura-white: #FFF9FB; --sakura-light-pink: #FFEFF2; --sakura-pink: #FFC2D1;
+            --sakura-medium-pink: #FFB2C6; --sakura-deep-pink: #E6A4B4; --branch-brown: #8B6B61;
+            --hand-dark: #5C5C5C; --second-hand-accent: #F57187;
+            --hand-hour-color: var(--hand-dark); --hand-minute-color: var(--hand-dark);
+            --hand-second-color: var(--second-hand-accent); --spoke-color: var(--branch-brown);
+            --center-dot-color: var(--hand-dark); --label-color: var(--sakura-deep-pink);
+            --dropdown-bg: rgba(255, 255, 255, 0.9); --dropdown-border: var(--sakura-medium-pink);
+            --dropdown-text: var(--branch-brown); --digital-font-family: 'Roboto Mono', monospace;
+            --digital-time-color: var(--hand-dark); --digital-time-diff-color: #6a4a40;
+            --digital-display-bg: rgba(255, 239, 242, 0.65);
+            --digital-display-border: rgba(230, 164, 180, 0.7);
+            --digital-display-shadow: rgba(0, 0, 0, 0.1);
+            --ball-numeral-font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+            --ball-numeral-color: var(--hand-dark);
+            --clock-size: 65vmin; --ball-size: calc(var(--clock-size) * 0.075);
+            --ball-numeral-font-size: calc(var(--ball-size) * 0.40);
+            --spoke-width: calc(var(--clock-size) * 0.009);
+            --center-dot-size: calc(var(--clock-size) * 0.055);
+            --hand-hour-width: calc(var(--clock-size) * 0.022);
+            --hand-minute-width: calc(var(--clock-size) * 0.017);
+            --hand-second-width: calc(var(--clock-size) * 0.006);
+        }
+        body {
+            font-family: 'Noto Sans', 'Noto Sans JP', 'Mukta Vaani', Arial, sans-serif;
+            background-color: #0a0a10; /* Slightly lighter dark for potential TV contrast */
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; box-sizing: border-box;
+            color: #E5E7EB; overflow: hidden; position: relative;
+        }
+        #globe-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+        }
+        .clock-wrapper {
+            position: relative; z-index: 10; display: flex; flex-direction: column;
+            align-items: center; padding: 20px;
+            background-color: rgba(27, 34, 49, 0.3); /* Adjusted alpha for TV */
+            border-radius: 15px; max-height: 95vh; overflow-y: auto;
+        }
+        .clock-main-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .analog-clock { width: var(--clock-size); height: var(--clock-size); position: relative; background-color: transparent; border: none; margin-bottom: 10px;}
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; z-index: 10; border-radius: calc(var(--clock-size) * 0.005); }
+        .hour-hand { width: var(--hand-hour-width); height: 22%; margin-left: calc(var(--hand-hour-width) / -2); background-color: var(--hand-hour-color); z-index: 12; }
+        .minute-hand { width: var(--hand-minute-width); height: 32%; margin-left: calc(var(--hand-minute-width) / -2); background-color: var(--hand-minute-color); z-index: 11; }
+        .second-hand { width: var(--hand-second-width); height: 38%; margin-left: calc(var(--hand-second-width) / -2); background-color: var(--hand-second-color); z-index: 13; }
+        .center-dot { width: var(--center-dot-size); height: var(--center-dot-size); background-color: var(--center-dot-color); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 14; box-shadow: 0 0 calc(var(--clock-size) * 0.01) rgba(0,0,0,0.2); }
+        .spoke { position: absolute; bottom: 50%; left: 50%; width: var(--spoke-width); height: 48%; background-color: var(--spoke-color); transform-origin: bottom center; z-index: 6; margin-left: calc(var(--spoke-width) / -2); border-radius: calc(var(--spoke-width) / 2); }
+        .ball {
+            position: absolute; width: var(--ball-size); height: var(--ball-size); border-radius: 50%; z-index: 7;
+            transform: translate(-50%, -50%);
+            box-shadow: inset calc(var(--ball-size) * 0.07) calc(var(--ball-size) * 0.07) calc(var(--ball-size) * 0.18) rgba(0,0,0,0.1),
+                        calc(var(--ball-size) * 0.03) calc(var(--ball-size) * 0.03) calc(var(--ball-size) * 0.1) rgba(0,0,0,0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--ball-numeral-font-family); font-size: var(--ball-numeral-font-size);
+            font-weight: 700; color: var(--ball-numeral-color); user-select: none;
+            overflow: hidden; line-height: 1; text-align: center;
+        }
+        .clock-label {
+            font-size: clamp(1.3rem, calc(var(--clock-size) * 0.08), 3rem); /* Slightly larger for TV */
+            font-weight: bold;
+            color: var(--label-color); text-shadow: 1px 1px 2px rgba(0,0,0,0.3), 0 0 5px var(--label-color);
+            z-index: 15; text-align: center; margin-bottom: 8px;
+        }
+        #clockDetailDisplay {
+            text-align: center; margin-bottom: 25px; padding: 10px 20px;
+            background-color: var(--digital-display-bg); border-radius: 8px;
+            border: 1px solid var(--digital-display-border); display: inline-block;
+            box-shadow: 0 2px 4px var(--digital-display-shadow); min-width: 280px; /* Slightly wider */
+            line-height: 1.5; /* Increased line height for readability */
+        }
+        .digital-time-main {
+            font-family: var(--digital-font-family);
+            font-size: clamp(1.4rem, calc(var(--clock-size) * 0.06), 2rem); /* Slightly larger */
+            font-weight: 500; color: var(--digital-time-color); letter-spacing: 1.5px;
+            display: block; margin-bottom: 5px;
+        }
+        .time-diff-main {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: clamp(0.85rem, calc(var(--clock-size) * 0.038), 1rem); /* Slightly larger */
+            color: var(--digital-time-diff-color); display: block;
+        }
+        .country-selector-container {
+            display: flex; flex-direction: column; align-items: center;
+            margin-top: 10px; width: 100%; max-width: 400px; /* Slightly wider for TV */
+        }
+        .country-selector-container label {
+            margin-bottom: 8px; font-size: 1rem; /* Larger label */
+            color: var(--sakura-light-pink); font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        #country-dropdown {
+            width: 100%; padding: 10px 12px; font-size: 1rem; /* Larger padding and font */
+            border: 1px solid var(--dropdown-border); border-radius: 6px;
+            background-color: var(--dropdown-bg); color: var(--dropdown-text);
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #country-dropdown:focus, #country-dropdown:focus-visible {
+            outline: 3px solid var(--sakura-pink); /* More prominent focus for TV D-pad */
+            border-color: var(--sakura-deep-pink);
+            box-shadow: 0 0 0 4px rgba(255, 194, 209, 0.4);
+        }
+        /* Media query might be less effective for TV, consider adjusting base --clock-size */
+        @media (max-width: 700px) { /* Adjusted breakpoint */
+            :root { --clock-size: 75vmin; }
+             /* Further adjustments if needed for smaller screens, though TV is usually large */
+        }
+    </style>
+</head>
+<body>
+    <audio id="clockTickSound" src="sounds/sound.wav" preload="auto"></audio>
+    <audio id="hourChimeSound" src="sounds/hour-clock.wav" preload="auto"></audio>
+
+    <div id="globe-container" style="display: none;"></div> <div class="clock-wrapper">
+        <div class="clock-main-container">
+            <div id="worldAnalogClock" class="analog-clock">
+                <div class="hand hour-hand"></div>
+                <div class="hand minute-hand"></div>
+                <div class="hand second-hand"></div>
+                <div class="center-dot"></div>
+            </div>
+            <div id="clockTimezoneLabel" class="clock-label">Loading...</div>
+            <div id="clockDetailDisplay" class="clock-details-display">
+                <span class="digital-time-main">--:--:-- --</span>
+                <span class="time-diff-main">(--h --m)</span>
+            </div>
+        </div>
+        <div class="country-selector-container">
+            <label for="country-dropdown">Select a Location:</label>
+            <select id="country-dropdown">
+                <option value="">-- Select Location --</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="error-display" style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: rgba(255,0,0,0.7); color: white; padding: 10px; text-align: center; z-index: 1000; display: none;">
+        An error occurred. Please check console.
+    </div>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        // Global error handler for uncaught exceptions
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error("Uncaught Error:", message, "at", source, lineno, colno, error);
+            var errorDisplay = document.getElementById('error-display');
+            if (errorDisplay) {
+                errorDisplay.textContent = "Error: " + message;
+                errorDisplay.style.display = 'block';
+            }
+            return true; // Prevents default browser error handling (e.g., alert)
+        };
+
+        console.log("Main script tag executing...");
+
+        // ==== START OF THREE.JS GLOBE SCRIPT (Optional) ====
+        let scene, camera, renderer, globe, controls_globe;
+        const GLOBE_ENABLED = true; // Set to false to disable globe for testing/performance
+
+        async function initGlobe() {
+            if (!GLOBE_ENABLED) {
+                console.log("Globe Script: Globe is disabled.");
+                return;
+            }
+            console.log("Globe Script: initGlobe() called");
+            try {
+                const globeContainer = document.getElementById('globe-container');
+                if (!globeContainer) {
+                    console.error("Globe Script: #globe-container DIV not found!");
+                    return;
+                }
+                globeContainer.style.display = 'block'; // Show it now
+
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 3; // Adjusted for potentially larger TV screen
+
+                renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true }); // antialias false for TV perf
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Cap pixelRatio for TV
+                globeContainer.appendChild(renderer.domElement);
+
+                controls_globe = new THREE.OrbitControls(camera, renderer.domElement);
+                controls_globe.enableDamping = true; controls_globe.dampingFactor = 0.05; // Slightly higher for TV
+                controls_globe.rotateSpeed = 0.2; controls_globe.enableZoom = false; controls_globe.enablePan = false;
+            
+                createEarth(); 
+                // createAtmosphere(); // Atmosphere is very costly, consider removing for TV by default
+                addLights();
+                window.addEventListener('resize', onWindowResizeGlobe);
+                console.log("Globe Script: initGlobe() finished successfully.");
+                animateGlobe(); // Start animation only if init is successful
+            } catch(e) {
+                console.error("Globe Script FATAL: Error during initGlobe:", e);
+                const globeContainer = document.getElementById('globe-container');
+                if(globeContainer) globeContainer.style.display = 'none'; // Hide if error
+            }
+        }
+
+        function createEarth() { /* ... (Use simplified version from previous response: 32,32 segments, fewer maps) ... */ 
+            try {
+                const geometry = new THREE.SphereGeometry(1, 32, 32); 
+                const material = new THREE.MeshPhongMaterial({
+                    map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'),
+                    shininess: 5 
+                });
+                globe = new THREE.Mesh(geometry, material); scene.add(globe);
+            } catch(e) { console.error("Globe Script: Error in createEarth():", e); }
+        }
+        // function createAtmosphere() { /* ... (Consider removing or heavily simplifying) ... */ }
+        function addLights() { /* ... (As before) ... */
+            scene.add(new THREE.AmbientLight(0xcccccc, 0.7)); 
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6); 
+            directionalLight.position.set(5, 3, 5); scene.add(directionalLight);
+        }
+        function onWindowResizeGlobe() { /* ... (As before) ... */
+             if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+        function animateGlobe() {
+            if (!GLOBE_ENABLED || !renderer || !scene || !camera) return; // Don't animate if disabled or not ready
+            requestAnimationFrame(animateGlobe);
+            try {
+                if (controls_globe) controls_globe.update();
+                if (globe) globe.rotation.y += 0.0003; 
+                renderer.render(scene, camera);
+            } catch (e) { 
+                console.error("Error in animateGlobe loop:", e); 
+            }
+        }
+        // ==== END OF THREE.JS GLOBE SCRIPT ====
+
+        // ==== START OF WORLD CLOCK SCRIPT ====
+        $(document).ready(function () {
+            console.log("jQuery Document Ready: Starting initializations.");
+            if (typeof jQuery == 'undefined') {
+                document.body.innerHTML = '<p style="color:red; font-size:2em;">jQuery not loaded. Clock cannot start.</p>';
+                console.error("jQuery not loaded!");
+                return;
+            }
+
+            initGlobe(); // Attempt to initialize the globe
+
+            console.log("Clock Script: Initializing clock UI and logic...");
+
+            function createAnalogClockMarkers() {
+                // ... (same as previous client-side marker creation) ...
+                console.log("Clock Script: createAnalogClockMarkers() called");
+                const romanNumeralsMap = { /* ... */ }; const ballColors = [ /* ... */ ];
+                const markerRadiusPercent = 40; const numElements = 12;
+                const analogClockDiv = document.getElementById('worldAnalogClock');
+                if (!analogClockDiv) { console.error("Analog clock container not found!"); return; }
+                // Clear previous markers if any (e.g. if function is re-run, though not typical here)
+                $(analogClockDiv).find('.spoke, .ball').remove(); 
+
+                for (let h = 1; h <= numElements; h++) {
+                    const spokeRotationCssDeg = (h % 12) * 30;
+                    const positioningMathAngleDeg = spokeRotationCssDeg - 90;
+                    const positioningAngleRad = positioningMathAngleDeg * (Math.PI / 180);
+                    const xMarker = 50 + (markerRadiusPercent * Math.cos(positioningAngleRad));
+                    const yMarker = 50 + (markerRadiusPercent * Math.sin(positioningAngleRad));
+                    const currentBallColor = ballColors[(h - 1) % ballColors.length];
+                    const spokeDiv = document.createElement('div');
+                    spokeDiv.className = 'spoke';
+                    spokeDiv.style.transform = `rotate(${spokeRotationCssDeg}deg)`;
+                    analogClockDiv.appendChild(spokeDiv);
+                    const ballDiv = document.createElement('div');
+                    ballDiv.className = 'ball';
+                    ballDiv.style.top = `${yMarker}%`; ballDiv.style.left = `${xMarker}%`;
+                    ballDiv.style.backgroundColor = currentBallColor;
+                    ballDiv.textContent = romanNumeralsMap[h];
+                    analogClockDiv.appendChild(ballDiv);
+                }
+                console.log("Clock Script: Analog clock markers created.");
+            }
+             try {
+                createAnalogClockMarkers();
+            } catch (e) {
+                console.error("Error creating analog clock markers:", e);
+                $('#error-display').text("Error creating clock face. Check console.").show();
+            }
+
+
+            let activeTimezone = '';
+            let clockInterval;
+            let userLocalTimezone = 'UTC'; // Default
+            let userLocalOffsetMinutesFromUTC = 0; // Default
+            let lastHourChimePlayedFor = -1; 
+
+            // Provide a small, default, sorted list of timezones.
+            // The user should replace this with their comprehensive list.
+            const countryTimezones = [
+                { name: "Australia (Sydney)", timezone: "Australia/Sydney" },
+                { name: "Germany (Berlin)", timezone: "Europe/Berlin" },
+                { name: "India (Kolkata)", timezone: "Asia/Kolkata" },
+                { name: "Japan (Tokyo)", timezone: "Asia/Tokyo" },
+                { name: "United Kingdom (London)", timezone: "Europe/London" },
+                { name: "United States (Los Angeles)", timezone: "America/Los_Angeles" },
+                { name: "United States (New York)", timezone: "America/New_York" }
+            ];
+            // countryTimezones.sort((a, b) => a.name.localeCompare(b.name)); // Already sorted
+            console.log("Clock Script: Default countryTimezones array loaded.");
+
+            function drawClockHands(timezone) { /* ... (same as previous, with readyState check for audio) ... */
+                const $analogClock = $('#worldAnalogClock');
+                if (!$analogClock.length || !timezone) return;
+                const now = new Date(); let hours, minutes, seconds, currentHour24;
+                try {
+                    const formatter = new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false });
+                    const parts = formatter.formatToParts(now); const timeParts = {};
+                    parts.forEach(part => { if (['hour', 'minute', 'second'].includes(part.type)) { timeParts[part.type] = parseInt(part.value, 10); }});
+                    hours = timeParts.hour !== undefined ? timeParts.hour : 0; minutes = timeParts.minute !== undefined ? timeParts.minute : 0; seconds = timeParts.second !== undefined ? timeParts.second : 0;
+                    currentHour24 = hours;
+                } catch (e) { console.warn(`Error parsing time for ${timezone}:`, e); $('#clockTimezoneLabel').text("Invalid Timezone"); return; }
+                const secondDegrees = (seconds * 6); const minuteDegrees = (minutes * 6) + (seconds / 60 * 6);
+                const displayHourForAnalog = currentHour24 % 12 || 12; const hourDegrees = (displayHourForAnalog * 30) + (minutes / 60 * 30);
+                $analogClock.find('.second-hand').css('transform', `rotate(${secondDegrees}deg)`);
+                $analogClock.find('.minute-hand').css('transform', `rotate(${minuteDegrees}deg)`);
+                $analogClock.find('.hour-hand').css('transform', `rotate(${hourDegrees}deg)`);
+                const tickSound = document.getElementById('clockTickSound');
+                if (tickSound && typeof tickSound.play === 'function' && tickSound.readyState >= 2) { tickSound.currentTime = 0; tickSound.play().catch(e => console.warn("Tick sound play error:", e.message)); }
+                if (minutes === 0 && seconds === 0 && currentHour24 !== lastHourChimePlayedFor) {
+                    const hourChime = document.getElementById('hourChimeSound');
+                    if (hourChime && typeof hourChime.play === 'function' && hourChime.readyState >= 2) {
+                        console.log(`Playing hour chime for ${currentHour24}:00 in ${timezone}`);
+                        hourChime.currentTime = 0; hourChime.play().catch(e => console.warn("Hour chime play error:", e.message));
+                        lastHourChimePlayedFor = currentHour24;
+                    }
+                }
+            }
+            function getDigitalTime(timezone) { /* ... (same robust version) ... */ 
+                try {
+                    new Date().toLocaleString("en", {timeZone: timezone}); // Pre-check timezone
+                    const now = new Date();
+                    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+                    return formatter.format(now);
+                } catch (e) { console.warn(`Digital time error for ${timezone}:`, e.message); return "--:--:-- --"; }
+            }
+            function getTargetTimezoneOffsetMinutesFromUTC(ianaTimeZone) { /* ... (same robust version) ... */
+                try {
+                    new Date().toLocaleString("en", {timeZone: ianaTimeZone});
+                    const date = new Date();
+                    const formatter = new Intl.DateTimeFormat('en', { timeZone: ianaTimeZone, hour12: false, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+                    const partsArray = formatter.formatToParts(date); const parts = {};
+                    partsArray.forEach(part => { if (['year', 'month', 'day', 'hour', 'minute', 'second'].includes(part.type)) { parts[part.type] = parseInt(part.value, 10); }});
+                    const required = ['year', 'month', 'day', 'hour', 'minute', 'second'];
+                    for (const rp of required) { if (typeof parts[rp] !== 'number' || isNaN(parts[rp])) throw new Error(`Invalid date part "${rp}"`); }
+                    const dateInTargetZoneAsUTC = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+                    const currentActualUTC = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds());
+                    if (isNaN(dateInTargetZoneAsUTC) || isNaN(currentActualUTC)) return null;
+                    return -((currentActualUTC - dateInTargetZoneAsUTC) / 60000);
+                } catch (e) { console.warn(`Offset calculation error for ${ianaTimeZone}:`, e.message); return null; }
+            }
+            function updateClockMainDetails(timezone) { /* ... (same) ... */
+                 if (!timezone) return;
+                $('.digital-time-main').text(getDigitalTime(timezone));
+            }
+
+            function setClockTimezone(timezone, label) {
+                console.log("Setting clock to TZ:", timezone, "Label:", label);
+                try {
+                    activeTimezone = timezone;
+                    $('#clockTimezoneLabel').text(label || timezone.split('/').pop().replace(/_/g, ' ')); // Fallback label
+                    let diffString = "(--h --m)";
+                    if (userLocalOffsetMinutesFromUTC !== null) { /* ... (rest of diffString logic as before) ... */
+                        const targetOffsetFromUTC = getTargetTimezoneOffsetMinutesFromUTC(timezone);
+                        if (targetOffsetFromUTC !== null) {
+                            const diffMinutes = targetOffsetFromUTC - userLocalOffsetMinutesFromUTC;
+                            if (timezone === userLocalTimezone) diffString = "(Your local time)";
+                            else if (diffMinutes === 0) diffString = "(Same as your local time)";
+                            else {
+                                const sign = diffMinutes > 0 ? "+" : "-"; const absDiffMinutes = Math.abs(diffMinutes);
+                                const hoursPart = Math.floor(absDiffMinutes / 60); const minutesPart = absDiffMinutes % 60;
+                                diffString = `(${sign}${hoursPart}h`;
+                                if (minutesPart > 0) diffString += ` ${minutesPart}m`;
+                                diffString += " from you)";
+                            }
+                        } else console.warn("Time diff calc failed for target " + timezone);
+                    } else console.warn("Time diff calc failed (user offset unknown).");
+                    $('.time-diff-main').text(diffString);
+
+                    if (clockInterval) clearInterval(clockInterval);
+                    lastHourChimePlayedFor = -1; 
+                    drawClockHands(activeTimezone);
+                    updateClockMainDetails(activeTimezone);
+                    clockInterval = setInterval(() => {
+                        if (!activeTimezone) return;
+                        drawClockHands(activeTimezone);
+                        updateClockMainDetails(activeTimezone);
+                    }, 1000);
+                } catch (e) {
+                    console.error("Error in setClockTimezone:", e);
+                    $('#clockTimezoneLabel').text("Error setting timezone");
+                    $('#error-display').text("Error setting timezone. Check console.").show();
+                }
+            }
+
+            function populateCountryDropdown() {
+                console.log("Populating country dropdown...");
+                const $dropdown = $('#country-dropdown');
+                let detectedUserTimezone = 'UTC'; // Sensible default
+                try {
+                    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions) {
+                        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        if (tz && typeof tz === 'string' && tz.length > 2) {
+                            detectedUserTimezone = tz;
+                        } else {
+                             console.warn("Intl timezone detection unusual:", tz, "Using UTC.");
+                        }
+                    } else {
+                        console.warn("Intl.DateTimeFormat not fully available. Using UTC.");
+                    }
+                } catch(e) { console.warn("Error detecting user timezone:", e, "Using UTC."); }
+                console.log("Detected user timezone:", detectedUserTimezone);
+                userLocalTimezone = detectedUserTimezone; // Set global userLocalTimezone
+                userLocalOffsetMinutesFromUTC = getTargetTimezoneOffsetMinutesFromUTC(userLocalTimezone) ?? 0; // Ensure it's a number
+
+                // Add "Your Local Time" option first
+                let localTimeText = 'Your Local Time';
+                let localTimeLabel = 'Local Time';
+                const matchedLocal = countryTimezones.find(c => c.timezone === detectedUserTimezone);
+                if (matchedLocal) {
+                    localTimeText = `${matchedLocal.name} (Local)`;
+                    localTimeLabel = matchedLocal.name;
+                } else {
+                    localTimeText = `Your Local Time (${detectedUserTimezone.split('/').pop().replace(/_/g, ' ')})`;
+                    localTimeLabel = detectedUserTimezone.split('/').pop().replace(/_/g, ' ');
+                }
+                
+                $dropdown.append($('<option>', {
+                    value: detectedUserTimezone,
+                    text: localTimeText,
+                    'data-label': localTimeLabel,
+                    'data-istrulyuserlocal': 'true'
+                }));
+
+                countryTimezones.forEach(country => {
+                    if (country.timezone !== detectedUserTimezone) { // Avoid duplicating local if it's in the main list
+                        $dropdown.append($('<option>', { value: country.timezone, text: country.name, 'data-label': country.name }));
+                    }
+                });
+                
+                try {
+                    $dropdown.val(detectedUserTimezone); // Set default selected
+                } catch(e) { console.warn("Error setting initial dropdown value:", e); }
+                
+                console.log("Dropdown populated. Initial value attempt:", detectedUserTimezone);
+                // Crucially, trigger change to set the clock for the first time
+                $dropdown.trigger('change'); 
+            }
+
+            $('#country-dropdown').on('change', function() { /* ... (same as before, ensure robust label selection) ... */
+                const selectedOption = $(this).find('option:selected');
+                const selectedTimezone = selectedOption.val();
+                const finalLabelToDisplay = selectedOption.attr('data-label') || selectedOption.text(); // Prioritize data-label
+                console.log(`Dropdown Change: TZ='${selectedTimezone}', Label='${finalLabelToDisplay}'`);
+                if (selectedTimezone && selectedTimezone !== "") {
+                    setClockTimezone(selectedTimezone, finalLabelToDisplay);
+                } else { /* Handle "-- Select Location --" */
+                    if (clockInterval) clearInterval(clockInterval);
+                    $('#clockTimezoneLabel').text("Select Location");
+                    $('.digital-time-main').text("--:--:-- --"); $('.time-diff-main').text("(--h --m)");
+                    const $ac = $('#worldAnalogClock');
+                    $ac.find('.second-hand,.minute-hand,.hour-hand').css('transform', 'rotate(0deg)');
+                }
+            });
+            
+            // --- Idle State Logic (as before, with slight adjustments for TV) ---
+            let idleTimer; const IDLE_TIMEOUT = 30000; const FADE_DURATION = 500;
+            function enterIdleState() { /* ... */ 
+                $('body').css('cursor', 'none'); 
+                $('#clockTimezoneLabel, #clockDetailDisplay, .country-selector-container').fadeOut(FADE_DURATION);
+            }
+            function exitIdleStateAndResetTimer() { /* ... */ 
+                $('#clockTimezoneLabel:hidden, #clockDetailDisplay:hidden, .country-selector-container:hidden').fadeIn(FADE_DURATION);
+                $('body').css('cursor', 'auto'); clearTimeout(idleTimer); idleTimer = setTimeout(enterIdleState, IDLE_TIMEOUT);
+            }
+            exitIdleStateAndResetTimer(); 
+            $(document).on('mousemove mousedown keydown click focus', exitIdleStateAndResetTimer); // Added focus
+
+
+            // --- Initial Clock Setup ---
+            console.log("Clock Script: Starting initial setup calls.");
+            try {
+                populateCountryDropdown(); // This will also trigger the first clock set
+            } catch (e) {
+                console.error("Major error during initial setup:", e);
+                $('#clockTimezoneLabel').text("Error Loading Clock");
+                $('#error-display').text("Critical error during setup. Check console.").show();
+            }
+            console.log("Clock Script: Initial clock setup complete or error handled.");
+            console.log("--- Page Fully Ready ---");
+        });
+        // ==== END OF WORLD CLOCK SCRIPT ====
+    </script>
+</body>
+</html>

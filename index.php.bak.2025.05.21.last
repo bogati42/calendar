@@ -1,0 +1,66 @@
+<?php require_once 'NepaliCalendar.php'; ?>
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>नेपाली पात्रो</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div id="calendarContainer">
+            <?php
+            if (!class_exists('NepaliCalendar')) {
+                echo "<p style='color:red;'>Error: NepaliCalendar class not found. Please ensure NepaliCalendar.php is included and correct.</p>";
+            } else {
+                $calendar = new NepaliCalendar();
+                $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
+                $month = isset($_GET['month']) ? (int)$_GET['month'] : null;
+                if (method_exists($calendar, 'getCalendarHTML')) {
+                    echo $calendar->getCalendarHTML($year, $month);
+                } else {
+                    echo "<p style='color:red;'>Error: getCalendarHTML method not found in NepaliCalendar class.</p>";
+                }
+            }
+            ?>
+	</div>
+	<div class="sidebar">
+            <div class="weather-info">
+                <h3>Current Weather</h3>
+                <div id="weatherForecast">
+                    <p>Loading weather...</p>
+                </div>
+	    </div>
+	    <div class="odometer" id="odometer">
+        	<p>Loading odometer...</p>
+    	    </div>
+	    <div class="date-info">
+                <h3>आजको मिति</h3>
+                <div id="currentDate">
+                </div>
+            </div>
+            <div id="nepaliClock" class="clock">Loading Nepali Time...</div>
+            <div class="date-converter">
+                <h4>Nepali ↔ English Date Converter</h4>
+                <h5>Nepali to English</h5>
+                <input type="text" id="nepaliDate" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}">
+                <button id="convertNepali">Convert</button>
+                <div id="nepResult" class="result"></div>
+                <h5>English to Nepali</h5>
+                <input type="date" id="englishDate">
+                <button id="convertEnglish">Convert</button>
+                <div id="engResult" class="result"></div>
+	    </div>
+        </div>
+    </div>
+    <div id="loading">
+        <i class="fas fa-spinner fa-spin"></i> Loading...
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="javascripts/javascript.js"></script>
+</body>
+</html>

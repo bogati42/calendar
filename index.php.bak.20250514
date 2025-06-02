@@ -1,0 +1,332 @@
+<?php
+require 'vendor/autoload.php';
+use Anuzpandey\LaravelNepaliDate\LaravelNepaliDate;
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nepali ↔ English Date Converter</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <style>
+        /* Dynamic Styling */
+        :root {
+            --primary-color: #2d5e87;
+            --secondary-color: #4ecdc4;
+            --error-color: #ff4444;
+            --success-color: #00c851;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            color: #2d3436;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            transform: translateY(0);
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            color: transparent;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .converter-box {
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            margin: 2rem 0;
+            padding: 2rem;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .converter-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255, 255, 255, 0.4),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .converter-box:hover::before {
+            left: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        input[type="text"], input[type="date"] {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 8px rgba(78, 205, 196, 0.3);
+            outline: none;
+        }
+
+        button {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(46, 134, 193, 0.4);
+        }
+
+        .result {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+        }
+
+        .show-result {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .error {
+            background: #ffebee;
+            color: var(--error-color);
+            border-left: 4px solid var(--error-color);
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: var(--success-color);
+            border-left: 4px solid var(--success-color);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            color: var(--primary-color);
+        }
+
+        .close-btn {
+            font-size: 14px;
+            background: none;
+            border: none;
+            color: #ff4d4d;
+            cursor: pointer;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 5px;
+        }
+
+        .close-btn:hover {
+            color: #d44;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Radheshyam Bogati Presents<br>Nepali ↔ English Date Converter</h1>
+
+        <!-- Nepali to English -->
+        <div class="converter-box">
+            <h2>Nepali to English</h2>
+            <div class="input-group">
+                <input type="text" id="nepaliDate" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}">
+                <button id="convertNepali">Convert</button>
+            </div>
+            <div id="nepResult" class="result"></div>
+            <div class="loading" id="nepLoading">Converting...</div>
+        </div>
+
+        <!-- English to Nepali -->
+        <div class="converter-box">
+            <h2>English to Nepali</h2>
+            <div class="input-group">
+                <input type="date" id="englishDate">
+                <button id="convertEnglish">Convert</button>
+            </div>
+            <div id="engResult" class="result"></div>
+            <div class="loading" id="engLoading">Converting...</div>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('convertNepali').addEventListener('click', function() {
+        const nepaliDate = document.getElementById('nepaliDate').value;
+        const resultDiv = document.getElementById('nepResult');
+        const loadingDiv = document.getElementById('nepLoading');
+
+        if (!nepaliDate) {
+            showResult(resultDiv, 'Please enter a valid Nepali date', 'error');
+            return;
+        }
+
+        loadingDiv.style.display = 'block';
+        resultDiv.classList.remove('show-result');
+
+        const data = {
+            type: 'nepToEng',
+            date: nepaliDate,
+            locale: 'ne',
+            format: 'l, j F Y'
+        };
+
+        fetch('convert.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showResult(resultDiv, `Error: ${data.error}`, 'error');
+            } else {
+                const details = data.result.details ?
+                    `<div class="detail-item"><strong>Details:</strong> ${JSON.stringify(data.result.details)}</div>` : '';
+                showResult(resultDiv, `
+                    <div class="detail-item"><strong>Converted Date:</strong> ${data.result.formatted}</div>
+                    ${details}
+                `, 'success');
+            }
+        })
+        .catch(error => {
+            showResult(resultDiv, 'Error: Connection failed', 'error');
+        })
+        .finally(() => {
+            loadingDiv.style.display = 'none';
+        });
+    });
+
+    document.getElementById('convertEnglish').addEventListener('click', function() {
+        const englishDate = document.getElementById('englishDate').value;
+        const resultDiv = document.getElementById('engResult');
+        const loadingDiv = document.getElementById('engLoading');
+
+        if (!englishDate) {
+            showResult(resultDiv, 'Please enter a valid English date', 'error');
+            return;
+        }
+
+        loadingDiv.style.display = 'block';
+        resultDiv.classList.remove('show-result');
+
+        const data = {
+            type: 'engToNep',
+            date: englishDate,
+            locale: 'en',
+            format: 'l, j F Y'
+        };
+
+        fetch('convert.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showResult(resultDiv, `Error: ${data.error}`, 'error');
+            } else {
+                const details = data.result.details ?
+                    `<div class="detail-item"><strong>Details:</strong> ${JSON.stringify(data.result.details)}</div>` : '';
+                showResult(resultDiv, `
+                    <div class="detail-item"><strong>Converted Date:</strong> ${data.result.formatted}</div>
+                    ${details}
+                `, 'success');
+            }
+        })
+        .catch(error => {
+            showResult(resultDiv, 'Error: Connection failed', 'error');
+        })
+        .finally(() => {
+            loadingDiv.style.display = 'none';
+        });
+    });
+
+    function showResult(element, message, type) {
+        element.className = `result ${type} show-result`;
+        element.innerHTML = `${message} <button class="close-btn" onclick="closeResult(event)">X</button>`;
+    }
+
+    function closeResult(event) {
+        const resultDiv = event.target.closest('.result');
+        resultDiv.classList.remove('show-result');
+    }
+    </script>
+</body>
+</html>
+

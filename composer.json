@@ -1,0 +1,7 @@
+{
+    "require": {
+        "anuzpandey/laravel-nepali-date": "^2.2",
+        "illuminate/support": "^10.48",
+        "shankhadev/bsdate": "^1.0"
+    }
+}

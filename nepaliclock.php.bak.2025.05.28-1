@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Large Nepali Analog Clock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta+Vaani:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #ffb347;
+            --secondary-color: #ff7e5f;
+            --accent-color: #fff7e6;
+        }
+
+        body {
+            font-family: 'Mukta Vaani', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 70%, var(--secondary-color) 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex; /* Use flexbox */
+            flex-direction: column; /* Stack children vertically */
+            justify-content: center; /* Center content vertically initially */
+            align-items: center;
+            box-sizing: border-box;
+            color: #333;
+        }
+
+        .clock-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: auto; /* Pushes the clock container up, creating space at bottom */
+            margin-top: auto; /* Centers it vertically if no other elements push it */
+        }
+
+        .analog-clock {
+            width: clamp(250px, 60vw, 500px);
+            height: clamp(250px, 60vw, 500px);
+            border-radius: 50%;
+            background-color: white;
+            border: 5px solid var(--primary-color);
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            background-color: #333;
+            border-radius: 2px;
+            z-index: 10;
+        }
+
+        .hour-hand {
+            width: 8px;
+            height: 25%;
+            margin-left: -4px;
+            background-color: var(--secondary-color);
+            z-index: 12;
+        }
+
+        .minute-hand {
+            width: 6px;
+            height: 35%;
+            margin-left: -3px;
+            background-color: #555;
+            z-index: 11;
+        }
+
+        .second-hand {
+            width: 2px;
+            height: 40%;
+            margin-left: -1px;
+            background-color: #d32f2f;
+            z-index: 13;
+        }
+
+        .center-dot {
+            width: 15px;
+            height: 15px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 14;
+        }
+
+        .clock-label {
+            margin-top: 20px;
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            font-weight: bold;
+            color: var(--secondary-color);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* Styles for marks and numbers */
+        .mark, .hour-number {
+            position: absolute;
+            transform: translate(-50%, -50%); /* Center the element */
+            z-index: 5;
+        }
+
+        .hour-mark {
+            width: 4px;
+            height: 15px;
+            background-color: #555;
+            border-radius: 2px;
+        }
+
+        .minute-mark {
+            width: 2px;
+            height: 8px;
+            background-color: #bbb;
+            border-radius: 1px;
+        }
+
+        .hour-number {
+            font-size: clamp(0.9rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+            color: #444;
+        }
+
+        /* Styles for the "Go to Main Page" link at the bottom */
+        .main-page-link {
+            margin-top: 30px; /* Space above the link */
+            margin-bottom: 20px; /* Space below the link */
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .main-page-link a {
+            color: var(--primary-color); /* Match clock's theme */
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: color 0.3s ease, transform 0.3s ease;
+            display: inline-block; /* Allows transform */
+            padding: 8px 15px; /* Add padding for better click area */
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.7); /* Slightly translucent background */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-page-link a:hover {
+            color: var(--secondary-color);
+            text-decoration: none; /* Keep no underline for this style */
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <div class="clock-container">
+        <div id="nepaliClockAnalog" class="analog-clock">
+            <div class="hand hour-hand"></div>
+            <div class="hand minute-hand"></div>
+            <div class="hand second-hand"></div>
+            <div class="center-dot"></div>
+
+            <?php
+            // Radius for numbers and marks (as a percentage of clock size)
+            $number_radius_percent = 40; // Adjust as needed
+            $mark_radius_percent = 47; // Marks should be closer to the edge
+
+            for ($i = 1; $i <= 12; $i++):
+                $angle_deg = $i * 30; // 360 degrees / 12 hours = 30 degrees per hour
+                $angle_rad = deg2rad($angle_deg - 90); // Convert to radians, adjust for 12 at top (0 degrees at 3 o'clock)
+
+                // Calculate x and y positions for numbers
+                $x_num = 50 + ($number_radius_percent * cos($angle_rad));
+                $y_num = 50 + ($number_radius_percent * sin($angle_rad));
+            ?>
+                <div class="hour-number"
+                    style="top: <?php echo $y_num; ?>%; left: <?php echo $x_num; ?>%;">
+                    <?php echo $i; ?>
+                </div>
+            <?php endfor; ?>
+
+            <?php for ($i = 0; $i < 60; $i++):
+                $angle_deg = $i * 6; // 360 degrees / 60 minutes = 6 degrees per minute
+                $angle_rad = deg2rad($angle_deg - 90); // Adjust for 12 at top (0 degrees at 3 o'clock)
+
+                // Calculate x and y positions for marks
+                $x_mark = 50 + ($mark_radius_percent * cos($angle_rad));
+                $y_mark = 50 + ($mark_radius_percent * sin($angle_rad));
+            ?>
+                <?php if ($i % 5 === 0): // Hour marks (every 5 minutes) ?>
+                    <div class="mark hour-mark"
+                        style="transform: translate(-50%, -50%) rotate(<?php echo $angle_deg; ?>deg);
+                                top: <?php echo $y_mark; ?>%; left: <?php echo $x_mark; ?>%;"></div>
+                <?php else: // Minute marks ?>
+                    <div class="mark minute-mark"
+                        style="transform: translate(-50%, -50%) rotate(<?php echo $angle_deg; ?>deg);
+                                top: <?php echo $y_mark; ?>%; left: <?php echo $x_mark; ?>%;"></div>
+                <?php endif; ?>
+            <?php endfor; ?>
+        </div>
+        <div class="clock-label">नेपाली समय</div>
+    </div>
+
+    <div class="main-page-link">
+        <a href="http://34.30.240.75/">Go to Main Page</a>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            function updateNepaliTime() {
+                const $analogClock = $('#nepaliClockAnalog');
+                if (!$analogClock.length) return;
+
+                const now = new Date();
+                const utcMs = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+                const nptOffsetMinutes = (5 * 60) + 45; // NPT is UTC+5:45
+                const nptMs = utcMs + (nptOffsetMinutes * 60 * 1000);
+                const nptDate = new Date(nptMs);
+
+                const hours = nptDate.getHours();
+                const minutes = nptDate.getMinutes();
+                const seconds = nptDate.getSeconds();
+
+                const secondDegrees = (seconds * 6);
+                const minuteDegrees = (minutes * 6) + (seconds / 60 * 6);
+                const hourDegrees = (hours % 12 * 30) + (minutes / 60 * 30) + (seconds / 3600 * 30); // Add second influence to hour hand
+
+                $analogClock.find('.second-hand').css('transform', `rotate(${secondDegrees}deg)`);
+                $analogClock.find('.minute-hand').css('transform', `rotate(${minuteDegrees}deg)`);
+                $analogClock.find('.hour-hand').css('transform', `rotate(${hourDegrees}deg)`);
+            }
+
+            (function init() {
+                setInterval(updateNepaliTime, 1000);
+                updateNepaliTime();
+            })();
+        });
+    </script>
+</body>
+</html>

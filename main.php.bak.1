@@ -1,0 +1,61 @@
+<?php
+// main.php
+// CRUCIAL: Include NepaliCalendar.php here so main.php is self-contained for calendar generation.
+require_once 'NepaliCalendar.php';
+?>
+    <div class="container">
+        <div id="calendarContainer">
+            <?php
+            // The class_exists check is still useful here as a fallback/debug tool
+            if (!class_exists('NepaliCalendar')) {
+                echo "<p style='color:red;'>Error: NepaliCalendar class not found. Please ensure NepaliCalendar.php is in the correct directory.</p>";
+            } else {
+                $calendar = new NepaliCalendar();
+                $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
+                $month = isset($_GET['month']) ? (int)$_GET['month'] : null;
+
+                if (method_exists($calendar, 'getCalendarHTML')) {
+                    echo $calendar->getCalendarHTML($year, $month);
+                } else {
+                    echo "<p style='color:red;'>Error: getCalendarHTML method not found in NepaliCalendar class.</p>";
+                }
+            }
+            ?>
+        </div>
+        <div class="sidebar">
+            <div class="weather-info">
+                <h3>Current Weather</h3>
+                <div id="weatherForecast">
+                    <p>Loading weather...</p>
+                </div>
+            </div>
+            <div class="date-info">
+                <h3>आजको मिति</h3>
+                <div id="currentDate">
+                </div>
+            </div>
+            <div id="nepaliClock" class="clock">Loading Nepali Time...</div>
+            <div class="date-converter">
+                <h4>Nepali ↔ English Date Converter</h4>
+                <h5>Nepali to English</h5>
+                <input type="text" id="nepaliDate" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}">
+                <button id="convertNepali">Convert</button>
+                <div id="nepResult" class="result"></div>
+                <h5>English to Nepali</h5>
+                <input type="date" id="englishDate">
+                <button id="convertEnglish">Convert</button>
+                <div id="engResult" class="result"></div>
+            </div>
+            <div id="selectedDayDetails" class="date-info">
+                <h3>चयन गरिएको मिति</h3>
+                <div id="selectedDateDisplay">
+                    <p>क्यालेन्डरमा कुनै मिति चयन गर्नुहोस्।</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="loading">
+        <i class="fas fa-spinner fa-spin"></i> Loading...
+    </div>
+
+    <?php /* No <script> tags here. All JavaScript goes in js/script.js */ ?>

@@ -1,0 +1,229 @@
+<?php
+return [
+    [
+        "name" => "Nepali New Year/Mesh Sankranti/Biska Jatra",
+        "bs_date" => ["year" => 2082, "month" => 1, "day" => 1],
+        "ad_date" => "2025-04-14"
+    ],
+    [
+        "name" => "International Labour Day/Bungadyo: Rato Matsyandranath Rath Yatra Prambha",
+        "bs_date" => ["year" => 2082, "month" => 1, "day" => 18],
+        "ad_date" => "2025-05-01"
+    ],
+    [
+        "name" => "Provincial Government Official Language Day/Kirat Samaj Sudhar Diwas",
+        "bs_date" => ["year" => 2082, "month" => 1, "day" => 24],
+        "ad_date" => "2025-05-07"
+    ],
+    [
+        "name" => "Buddha Jayanti/Ubhauli Parwa/Chandeshwari Jatra/Chandi Poornima/Kurma Jayanti/Gorakhnath Jayanti/Poornima Vrata/Baisakh Snan Samapti/International Nurses Day",
+        "bs_date" => ["year" => 2082, "month" => 1, "day" => 29],
+        "ad_date" => "2025-05-12"
+    ],
+    [
+        "name" => "Republic Day",
+        "bs_date" => ["year" => 2082, "month" => 2, "day" => 15],
+        "ad_date" => "2025-05-29"
+    ],
+    [
+        "name" => "Janai Poornima/Rakshya Bandhan/Kwati Khane Din/Poornima Vrata/Rishi Tarpani/Sanskrit Diwas",
+        "bs_date" => ["year" => 2082, "month" => 4, "day" => 24],
+        "ad_date" => "2025-08-09"
+    ],
+    [
+        "name" => "Gaijatra/International Day of the World's Indigenous Peoples",
+        "bs_date" => ["year" => 2082, "month" => 4, "day" => 25],
+        "ad_date" => "2025-08-10"
+    ],
+    [
+        "name" => "Shree Krishna Janmashtami/Gorakhkali Puja",
+        "bs_date" => ["year" => 2082, "month" => 4, "day" => 31],
+        "ad_date" => "2025-08-16"
+    ],
+    [
+        "name" => "Haritalika Teej",
+        "bs_date" => ["year" => 2082, "month" => 5, "day" => 10],
+        "ad_date" => "2025-08-26"
+    ],
+    [
+        "name" => "Radha Janmotsav/Gaura Parva/Gorakhkali Puja/Durwashtami",
+        "bs_date" => ["year" => 2082, "month" => 5, "day" => 15],
+        "ad_date" => "2025-08-31"
+    ],
+    [
+        "name" => "Indra Jaatra/Ananta Chaturdashi Vrata",
+        "bs_date" => ["year" => 2082, "month" => 5, "day" => 21],
+        "ad_date" => "2025-09-06"
+    ],
+    [
+        "name" => "Nawami Shraddha/Jitiya Parva",
+        "bs_date" => ["year" => 2082, "month" => 5, "day" => 30],
+        "ad_date" => "2025-09-15"
+    ],
+    [
+        "name" => "Trayodashi Shraddha/Magha Shraddha/Sambidhan Diwas",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 3],
+        "ad_date" => "2025-09-19"
+    ],
+    [
+        "name" => "Ghatasthaapana Vrata/Navaraatra Arambha",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 6],
+        "ad_date" => "2025-09-22"
+    ],
+    [
+        "name" => "Fulpati/World Heart Day",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 13],
+        "ad_date" => "2025-09-29"
+    ],
+    [
+        "name" => "Maha Ashtami Vrata/Kalratri/Gorakhkali Puja/Bhaumashtami Vrata",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 14],
+        "ad_date" => "2025-09-30"
+    ],
+    [
+        "name" => "Maha Nawami Vrata/International Day of Older Persons",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 15],
+        "ad_date" => "2025-10-01"
+    ],
+    [
+        "name" => "Bijaya Dashami/Devi Bisharjan/World Non Violence Day",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 16],
+        "ad_date" => "2025-10-02"
+    ],
+    [
+        "name" => "Papakunsa Ekadashi Vrata/World Smile Day",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 17],
+        "ad_date" => "2025-10-03"
+    ],
+    [
+        "name" => "Dashain Holiday/Shani Pradosh Vrata/World Animal Day",
+        "bs_date" => ["year" => 2082, "month" => 6, "day" => 18],
+        "ad_date" => "2025-10-04"
+    ],
+    [
+        "name" => "Laxmi Pooja/Laxmi Prasad Devkota Janma Jayanti/Kukur Tihar/Narak Chaturdashi/Sukha Ratri",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 3],
+        "ad_date" => "2025-10-20"
+    ],
+    [
+        "name" => "Tihar Holiday",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 4],
+        "ad_date" => "2025-10-21"
+    ],
+    [
+        "name" => "Gobardan Puja/Gaigoru Puja/Mha Puja/Hali Tihar/Nepal Sambat 1145 Starts",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 5],
+        "ad_date" => "2025-10-22"
+    ],
+    [
+        "name" => "Bhai Tika/Kija Pooja",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 6],
+        "ad_date" => "2025-10-23"
+    ],
+    [
+        "name" => "Tihar Holiday/UN Day/World Development Information Day",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 7],
+        "ad_date" => "2025-10-24"
+    ],
+    [
+        "name" => "Chhath Parva",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 10],
+        "ad_date" => "2025-10-27"
+    ],
+    [
+        "name" => "Poornima Vrata/Chaturmas Wrata Samapti/Kartik Snan Samapti/Guru Nanak Jayanti",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 19],
+        "ad_date" => "2025-11-05"
+    ],
+    [
+        "name" => "Falgunanda Jayanti",
+        "bs_date" => ["year" => 2082, "month" => 7, "day" => 25],
+        "ad_date" => "2025-11-11"
+    ],
+    [
+        "name" => "International Day of Disabled Persons",
+        "bs_date" => ["year" => 2082, "month" => 8, "day" => 17],
+        "ad_date" => "2025-12-03"
+    ],
+    [
+        "name" => "Poornima Vrata/Dhanya Poornima/Yomari Punhi/Jyapu Diwas",
+        "bs_date" => ["year" => 2082, "month" => 8, "day" => 18],
+        "ad_date" => "2025-12-04"
+    ],
+    [
+        "name" => "Christmas",
+        "bs_date" => ["year" => 2082, "month" => 9, "day" => 10],
+        "ad_date" => "2025-12-25"
+    ],
+    [
+        "name" => "Tamu Lhosar/Kavi Siromani Lekhnath Jayanti/Putrada Ekadashi Vrata",
+        "bs_date" => ["year" => 2082, "month" => 9, "day" => 15],
+        "ad_date" => "2025-12-30"
+    ],
+    [
+        "name" => "Prithivi Jayanti/Rashtriya Ekata Diwas/Gorakhkali Puja",
+        "bs_date" => ["year" => 2082, "month" => 9, "day" => 27],
+        "ad_date" => "2026-01-11"
+    ],
+    [
+        "name" => "Makar Sankranti/Ghiu chaku khane Din/Uttarayan Arambha",
+        "bs_date" => ["year" => 2082, "month" => 10, "day" => 1],
+        "ad_date" => "2026-01-15"
+    ],
+    [
+        "name" => "Sonam Lhochhar/Shree Ballav Jayanti",
+        "bs_date" => ["year" => 2082, "month" => 10, "day" => 5],
+        "ad_date" => "2026-01-19"
+    ],
+    [
+        "name" => "Basanta Panchami vrata/Saraswati Pooja",
+        "bs_date" => ["year" => 2082, "month" => 10, "day" => 9],
+        "ad_date" => "2026-01-23"
+    ],
+    [
+        "name" => "Sahid Diwas/Pradosh Vrata",
+        "bs_date" => ["year" => 2082, "month" => 10, "day" => 16],
+        "ad_date" => "2026-01-30"
+    ],
+    [
+        "name" => "Maha-Shivaratri/Army Day/Silachahre Puja",
+        "bs_date" => ["year" => 2082, "month" => 11, "day" => 3],
+        "ad_date" => "2026-02-15"
+    ],
+    [
+        "name" => "Gyalpo Lhosar",
+        "bs_date" => ["year" => 2082, "month" => 11, "day" => 6],
+        "ad_date" => "2026-02-18"
+    ],
+    [
+        "name" => "Prajatantra Diwas/Election Day",
+        "bs_date" => ["year" => 2082, "month" => 11, "day" => 7],
+        "ad_date" => "2026-02-19"
+    ],
+    [
+        "name" => "Fagu Poornima/Holi/Poornima Vrata",
+        "bs_date" => ["year" => 2082, "month" => 11, "day" => 18],
+        "ad_date" => "2026-03-02"
+    ],
+    [
+        "name" => "Fagu Poornima (Terai)/Khandagras Chandra Grahan/World Wildlife Day",
+        "bs_date" => ["year" => 2082, "month" => 11, "day" => 19],
+        "ad_date" => "2026-03-03"
+    ],
+    [
+        "name" => "International Womens Day",
+        "bs_date" => ["year" => 2082, "month" => 11, "day" => 24],
+        "ad_date" => "2026-03-08"
+    ],
+    [
+        "name" => "Ghode Jaatra",
+        "bs_date" => ["year" => 2082, "month" => 12, "day" => 4],
+        "ad_date" => "2026-03-18"
+    ],
+    [
+        "name" => "Shree Ram Nawami Vrata/World Theater Day",
+        "bs_date" => ["year" => 2082, "month" => 12, "day" => 13],
+        "ad_date" => "2026-03-27"
+    ]
+];
+?>

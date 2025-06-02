@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced 3D Globe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars */
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background for space */
+        }
+        #globe-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            display: block;
+            background-color: transparent; /* Canvas background will be transparent, body background will show */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div id="globe-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables for Three.js scene
+        let scene, camera, renderer, globe, atmosphere, stars;
+        let isDragging = false;
+        let previousMousePosition = {
+            x: 0,
+            y: 0
+        };
+
+        /**
+         * Initializes the Three.js scene, camera, renderer, globe, atmosphere, and stars.
+         */
+        function init() {
+            // Get the container element
+            const container = document.getElementById('globe-container');
+
+            // 1. Scene: Where all objects, cameras, and lights are placed.
+            scene = new THREE.Scene();
+
+            // 2. Camera: Defines what is visible in the scene.
+            // PerspectiveCamera( fov, aspect, near, far )
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 2; // Position the camera slightly back to see the globe
+
+            // 3. Renderer: Renders the scene using WebGL.
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // alpha: true for transparent background
+            renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size to full window
+            container.appendChild(renderer.domElement); // Add the renderer's canvas to the container
+
+            // 4. Globe: Create a sphere geometry for the globe.
+            const globeGeometry = new THREE.SphereGeometry(1, 64, 64); // Radius 1, high segments for smooth surface
+
+            // Create a canvas texture to draw a more detailed world map and country names
+            const canvas = document.createElement('canvas');
+            canvas.width = 2048; // Standard texture width
+            canvas.height = 1024; // Standard texture height (2:1 aspect ratio for sphere mapping)
+            const context = canvas.getContext('2d');
+
+            // Draw oceans
+            context.fillStyle = '#004488'; // Deeper ocean blue
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw continents (more refined simplified shapes)
+            context.fillStyle = '#339933'; // Green for land
+            context.strokeStyle = '#227722'; // Darker green for borders
+            context.lineWidth = 2;
+
+            // Helper function to draw a polygon
+            function drawPolygon(points) {
+                context.beginPath();
+                context.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    context.lineTo(points[i].x, points[i].y);
+                }
+                context.closePath();
+                context.fill();
+                context.stroke();
+            }
+
+            // North America
+            drawPolygon([
+                { x: canvas.width * 0.18, y: canvas.height * 0.25 },
+                { x: canvas.width * 0.25, y: canvas.height * 0.15 },
+                { x: canvas.width * 0.35, y: canvas.height * 0.2 },
+                { x: canvas.width * 0.32, y: canvas.height * 0.4 },
+                { x: canvas.width * 0.28, y: canvas.height * 0.45 },
+                { x: canvas.width * 0.18, y: canvas.height * 0.38 }
+            ]);
+
+            // South America
+            drawPolygon([
+                { x: canvas.width * 0.28, y: canvas.height * 0.45 },
+                { x: canvas.width * 0.22, y: canvas.height * 0.68 },
+                { x: canvas.width * 0.32, y: canvas.height * 0.78 },
+                { x: canvas.width * 0.38, y: canvas.height * 0.55 }
+            ]);
+
+            // Europe
+            drawPolygon([
+                { x: canvas.width * 0.45, y: canvas.height * 0.2 },
+                { x: canvas.width * 0.55, y: canvas.height * 0.15 },
+                { x: canvas.width * 0.6, y: canvas.height * 0.25 },
+                { x: canvas.width * 0.55, y: canvas.height * 0.35 },
+                { x: canvas.width * 0.48, y: canvas.height * 0.3 }
+            ]);
+
+            // Africa
+            drawPolygon([
+                { x: canvas.width * 0.48, y: canvas.height * 0.35 },
+                { x: canvas.width * 0.55, y: canvas.height * 0.55 },
+                { x: canvas.width * 0.5, y: canvas.height * 0.7 },
+                { x: canvas.width * 0.43, y: canvas.height * 0.5 }
+            ]);
+
+            // Asia
+            drawPolygon([
+                { x: canvas.width * 0.6, y: canvas.height * 0.1 },
+                { x: canvas.width * 0.9, y: canvas.height * 0.2 },
+                { x: canvas.width * 0.85, y: canvas.height * 0.55 },
+                { x: canvas.width * 0.65, y: canvas.height * 0.4 }
+            ]);
+
+            // Australia
+            drawPolygon([
+                { x: canvas.width * 0.75, y: canvas.height * 0.6 },
+                { x: canvas.width * 0.85, y: canvas.height * 0.65 },
+                { x: canvas.width * 0.8, y: canvas.height * 0.75 },
+                { x: canvas.width * 0.7, y: canvas.height * 0.7 }
+            ]);
+
+            // Antarctica (bottom of the globe)
+            context.fillRect(0, canvas.height * 0.9, canvas.width, canvas.height * 0.1);
+
+
+            // Add Country Names (simplified and approximate positions)
+            context.fillStyle = '#FFFFFF'; // White text for country names
+            context.font = 'bold 30px Arial'; // Slightly smaller font for more names
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+
+            // North America
+            context.fillText('CANADA', canvas.width * 0.25, canvas.height * 0.2);
+            context.fillText('USA', canvas.width * 0.25, canvas.height * 0.3);
+            context.fillText('MEXICO', canvas.width * 0.25, canvas.height * 0.38);
+
+            // South America
+            context.fillText('BRAZIL', canvas.width * 0.28, canvas.height * 0.6);
+            context.fillText('ARGENTINA', canvas.width * 0.28, canvas.height * 0.7);
+
+            // Europe
+            context.fillText('UK', canvas.width * 0.48, canvas.height * 0.2);
+            context.fillText('FRANCE', canvas.width * 0.52, canvas.height * 0.25);
+            context.fillText('GERMANY', canvas.width * 0.55, canvas.height * 0.2);
+            context.fillText('ITALY', canvas.width * 0.53, canvas.height * 0.3);
+
+            // Africa
+            context.fillText('ALGERIA', canvas.width * 0.48, canvas.height * 0.45);
+            context.fillText('NIGERIA', canvas.width * 0.52, canvas.height * 0.55);
+            context.fillText('EGYPT', canvas.width * 0.55, canvas.height * 0.4);
+            context.fillText('SOUTH AFRICA', canvas.width * 0.5, canvas.height * 0.68);
+
+            // Asia
+            context.fillText('RUSSIA', canvas.width * 0.7, canvas.height * 0.15);
+            context.fillText('CHINA', canvas.width * 0.75, canvas.height * 0.3);
+            context.fillText('INDIA', canvas.width * 0.68, canvas.height * 0.4);
+            context.fillText('JAPAN', canvas.width * 0.85, canvas.height * 0.25);
+            context.fillText('INDONESIA', canvas.width * 0.8, canvas.height * 0.58);
+
+            // Australia
+            context.fillText('AUSTRALIA', canvas.width * 0.78, canvas.height * 0.68);
+
+
+            const texture = new THREE.CanvasTexture(canvas);
+            // Ensure texture updates if canvas content changes (though not dynamic here)
+            texture.needsUpdate = true;
+
+            const globeMaterial = new THREE.MeshPhongMaterial({
+                map: texture, // Apply the canvas texture as the map
+                specular: 0x333333, // Specular color for highlights
+                shininess: 20,      // Shininess of the material
+                transparent: false, // Not transparent
+                opacity: 1
+            });
+
+            globe = new THREE.Mesh(globeGeometry, globeMaterial);
+            scene.add(globe);
+
+            // 5. Atmosphere: Create a slightly larger sphere for the glow effect.
+            const atmosphereGeometry = new THREE.SphereGeometry(1.05, 64, 64); // Slightly larger
+            const atmosphereMaterial = new THREE.MeshLambertMaterial({
+                color: 0x88bbff, // Light blue glow
+                transparent: true,
+                opacity: 0.15, // Subtle transparency
+                side: THREE.BackSide // Render on the inside of the sphere
+            });
+            atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            scene.add(atmosphere);
+
+            // 6. Stars: Create a particle system for stars in the background.
+            const starGeometry = new THREE.BufferGeometry();
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) { // 10,000 stars
+                const x = (Math.random() - 0.5) * 200; // Random x position
+                const y = (Math.random() - 0.5) * 200; // Random y position
+                const z = (Math.random() - 0.5) * 200; // Random z position
+                starVertices.push(x, y, z);
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff, // White stars
+                size: 0.1 // Small size
+            });
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+
+
+            // 7. Lights: Add ambient light and directional light for better visibility.
+            const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // White light, intensity 0.8
+            directionalLight.position.set(1, 1, 1).normalize(); // Position the light
+            scene.add(directionalLight);
+
+            // Event Listeners for mouse interaction
+            renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+            renderer.domElement.addEventListener('mouseup', onMouseUp, false);
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+
+            // Handle window resizing
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        /**
+         * Handles window resizing to update camera aspect ratio and renderer size.
+         */
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /**
+         * Handles mouse down event to start dragging.
+         * @param {MouseEvent} event - The mouse event.
+         */
+        function onMouseDown(event) {
+            isDragging = true;
+            previousMousePosition = {
+                x: event.clientX,
+                y: event.clientY
+            };
+        }
+
+        /**
+         * Handles mouse up event to stop dragging.
+         */
+        function onMouseUp() {
+            isDragging = false;
+        }
+
+        /**
+         * Handles mouse move event to rotate the globe when dragging.
+         * @param {MouseEvent} event - The mouse event.
+         */
+        function onMouseMove(event) {
+            if (!isDragging) return;
+
+            const deltaX = event.clientX - previousMousePosition.x;
+            const deltaY = event.clientY - previousMousePosition.y;
+
+            // Rotate the globe based on mouse movement
+            // Adjust sensitivity as needed
+            globe.rotation.y += deltaX * 0.005; // Rotate around Y-axis for horizontal movement
+            globe.rotation.x += deltaY * 0.005; // Rotate around X-axis for vertical movement
+
+            // Keep atmosphere and stars aligned with globe rotation
+            atmosphere.rotation.copy(globe.rotation);
+            stars.rotation.copy(globe.rotation);
+
+
+            previousMousePosition = {
+                x: event.clientX,
+                y: event.clientY
+            };
+        }
+
+        /**
+         * Animation loop to render the scene.
+         */
+        function animate() {
+            requestAnimationFrame(animate); // Request the next frame
+
+            // Optional: Add a slight continuous rotation for effect if not dragging
+            if (!isDragging) {
+                globe.rotation.y += 0.001;
+                atmosphere.rotation.copy(globe.rotation); // Keep atmosphere rotating with globe
+                stars.rotation.y += 0.0005; // Stars can rotate slightly slower or independently
+            }
+
+            renderer.render(scene, camera); // Render the scene with the camera
+        }
+
+        // Start the application when the window loads
+        window.onload = function () {
+            init(); // Initialize the scene
+            animate(); // Start the animation loop
+        };
+    </script>
+</body>
+</html>
+

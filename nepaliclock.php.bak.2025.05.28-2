@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nepali Vitra Ball Clock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta+Vaani:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #ffb347; /* Orange tones for accent */
+            --secondary-color: #ff7e5f; /* Coral tones for accent */
+            --accent-color: #fff7e6; /* Light cream background */
+            --hand-hour-color: #333333;
+            --hand-minute-color: #555555;
+            --hand-second-color: #d32f2f; /* Red */
+            --spoke-color: #666666;
+            --center-dot-color: #333333;
+        }
+
+        body {
+            font-family: 'Mukta Vaani', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--primary-color) 70%, var(--secondary-color) 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            color: #333;
+        }
+
+        .clock-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.6); /* Slightly more transparent for Vitra */
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: auto;
+            margin-top: auto;
+        }
+
+        .analog-clock {
+            width: clamp(280px, 60vw, 450px); /* Adjusted size for ball clock proportions */
+            height: clamp(280px, 60vw, 450px);
+            position: relative;
+            /* Vitra Ball Clock has no traditional face/border */
+            background-color: transparent;
+            border: none;
+            border-radius: 0; /* No longer a circle itself */
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            z-index: 10;
+            border-radius: 3px; /* Smoother hands */
+        }
+
+        .hour-hand {
+            width: 8px;
+            height: 22%; /* Proportionally shorter for Vitra */
+            margin-left: -4px;
+            background-color: var(--hand-hour-color);
+            z-index: 12;
+        }
+
+        .minute-hand {
+            width: 6px;
+            height: 32%; /* Proportionally shorter for Vitra */
+            margin-left: -3px;
+            background-color: var(--hand-minute-color);
+            z-index: 11;
+        }
+
+        .second-hand {
+            width: 2px;
+            height: 38%;
+            margin-left: -1px;
+            background-color: var(--hand-second-color);
+            z-index: 13;
+        }
+
+        .center-dot {
+            width: 20px; /* Slightly larger for Vitra style */
+            height: 20px;
+            background-color: var(--center-dot-color);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 14;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+
+        /* Vitra Ball Clock Elements */
+        .spoke {
+            position: absolute;
+            bottom: 50%; /* Originates from center */
+            left: 50%;
+            width: 3px; /* Thickness of the spoke */
+            height: 48%; /* Length of the spoke (to almost reach edge) */
+            background-color: var(--spoke-color);
+            transform-origin: bottom center;
+            z-index: 6;
+            margin-left: -1.5px; /* Half of width */
+            border-radius: 1.5px;
+        }
+
+        .ball {
+            position: absolute;
+            width: 28px; /* Size of the ball */
+            height: 28px;
+            border-radius: 50%;
+            z-index: 7; /* On top of spokes */
+            transform: translate(-50%, -50%); /* Centering the ball */
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2), 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .clock-label {
+            margin-top: 25px; /* Adjusted spacing */
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            font-weight: bold;
+            color: var(--secondary-color);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .main-page-link {
+            margin-top: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .main-page-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: color 0.3s ease, transform 0.3s ease;
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.8); /* Brighter button */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-page-link a:hover {
+            color: var(--secondary-color);
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            background-color: rgba(255, 255, 255, 0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="clock-container">
+        <div id="nepaliClockAnalog" class="analog-clock">
+            <div class="hand hour-hand"></div>
+            <div class="hand minute-hand"></div>
+            <div class="hand second-hand"></div>
+            <div class="center-dot"></div>
+
+            <?php
+            // Define colors for the balls - classic Vitra Ball clock style
+            $ball_colors = [
+                '#FF5733', // Vivid Orange
+                '#3498DB', // Strong Blue
+                '#F1C40F', // Bright Yellow
+                '#2ECC71', // Emerald Green
+                '#9B59B6', // Amethyst Purple
+                '#E74C3C', // Alizarin Crimson (Red)
+                '#1ABC9C', // Turquoise
+                '#F39C12', // Orange
+                '#2980B9', // Belize Hole (Darker Blue)
+                '#27AE60', // Nephritis (Darker Green)
+                '#8E44AD', // Wisteria (Darker Purple)
+                '#D35400'  // Pumpkin (Darker Orange)
+            ];
+
+            $ball_radius_percent = 42; // Distance of ball center from clock center
+            $num_balls = 12;
+
+            for ($i = 0; $i < $num_balls; $i++):
+                // Angle for spokes and balls (12 positions)
+                $angle_deg = $i * (360 / $num_balls);
+                // Adjust angle so 0 degrees is at 12 o'clock (top) for spoke rotation
+                $spoke_angle_deg = $angle_deg;
+
+                // Angle for ball positioning (0 degrees at 3 o'clock for cos/sin)
+                // We subtract 90 to shift the reference for positioning
+                $positioning_angle_rad = deg2rad($angle_deg - 90);
+
+                // Calculate x and y positions for balls
+                $x_ball = 50 + ($ball_radius_percent * cos($positioning_angle_rad));
+                $y_ball = 50 + ($ball_radius_percent * sin($positioning_angle_rad));
+
+                $current_ball_color = $ball_colors[$i % count($ball_colors)];
+            ?>
+                <div class="spoke"
+                     style="transform: rotate(<?php echo $spoke_angle_deg; ?>deg);">
+                </div>
+                <div class="ball"
+                     style="top: <?php echo $y_ball; ?>%; left: <?php echo $x_ball; ?>%; background-color: <?php echo $current_ball_color; ?>;">
+                </div>
+            <?php endfor; ?>
+
+        </div>
+        <div class="clock-label">नेपाली समय</div>
+    </div>
+
+    <div class="main-page-link">
+        <a href="http://34.30.240.75/">Go to Main Page</a>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            function updateNepaliTime() {
+                const $analogClock = $('#nepaliClockAnalog');
+                if (!$analogClock.length) return;
+
+                const now = new Date();
+                const utcMs = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+                const nptOffsetMinutes = (5 * 60) + 45; // NPT is UTC+5:45
+                const nptMs = utcMs + (nptOffsetMinutes * 60 * 1000);
+                const nptDate = new Date(nptMs);
+
+                const hours = nptDate.getHours();
+                const minutes = nptDate.getMinutes();
+                const seconds = nptDate.getSeconds();
+
+                const secondDegrees = (seconds * 6);
+                const minuteDegrees = (minutes * 6) + (seconds / 60 * 6);
+                const hourDegrees = (hours % 12 * 30) + (minutes / 60 * 30) + (seconds / 3600 * 30);
+
+                $analogClock.find('.second-hand').css('transform', `rotate(${secondDegrees}deg)`);
+                $analogClock.find('.minute-hand').css('transform', `rotate(${minuteDegrees}deg)`);
+                $analogClock.find('.hour-hand').css('transform', `rotate(${hourDegrees}deg)`);
+            }
+
+            (function init() {
+                setInterval(updateNepaliTime, 1000);
+                updateNepaliTime();
+            })();
+        });
+    </script>
+</body>
+</html>

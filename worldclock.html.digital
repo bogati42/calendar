@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Clock TV</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta+Vaani:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        /* WebOS 1.4 Friendly "Sakura Theme" CSS - Fixed Values */
+        :root { 
+            --label-color-val: #E6A4B4; 
+            --digital-time-color-val: #5C5C5C;
+            --fallback-color-val: #FFC107; /* Gold for fallback indication */
+            --sakura-light-pink-val: #FFEFF2;
+            --sakura-medium-pink-val: #FFB2C6;
+            --sakura-deep-pink-val: #E6A4B4; 
+            --sakura-pink-val: #FFC2D1;
+        }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; background-color: #111827; color: #E5E7EB; font-family: 'Noto Sans', 'Noto Sans JP', 'Mukta Vaani', Arial, sans-serif; }
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
+        
+        #globe-container { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; 
+        } 
+
+        .clock-container-to-center { 
+            position: relative; /* For z-index stacking above globe */
+            z-index: 10;
+            padding: 20px; background-color: rgba(17, 24, 39, 0.35); /* Slightly more opaque backdrop */
+            border-radius: 15px; margin: 0 auto; width: auto; max-width: 450px; /* Wider for comfort */
+            text-align: center; /* Center contents of this box */
+        }
+        
+        .clock-label { 
+            font-size: 22px; font-weight: bold; color: var(--label-color-val); 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3), 0 0 5px var(--label-color-val); 
+            margin-bottom: 15px; 
+        }
+        .clock-label.fallback { color: var(--fallback-color-val) !important; text-shadow: 1px 1px 1px #333; }
+        
+        #clockDetailDisplay { 
+            margin-bottom: 20px; padding: 10px 20px; 
+            background-color: rgba(255, 239, 242, 0.75); /* More opaque */
+            border-radius: 8px; border: 1px solid rgba(230, 164, 180, 0.7); 
+            display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            min-width: 280px; line-height: 1.5; 
+        }
+        .digital-time-main { 
+            font-family: 'Roboto Mono', monospace; font-size: 28px; /* Larger digital time */
+            font-weight: 500; color: var(--digital-time-color-val); 
+            letter-spacing: 2px; display: block; margin-bottom: 5px; 
+        }
+        .digital-time-main.fallback { color: var(--fallback-color-val) !important; }
+        .time-diff-main { font-family: 'Noto Sans', sans-serif; font-size: 13px; color: #6a4a40; display: block; }
+        
+        .country-selector-container { 
+            display: flex; flex-direction: column; align-items: center;
+            margin-top: 10px; width: 100%; max-width: 380px; 
+        }
+        .country-selector-container label {
+            margin-bottom: 6px; font-size: 0.9em; color: var(--sakura-light-pink-val);
+            font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        #country-dropdown {
+            width: 100%; padding: 8px 10px; font-size: 0.9em; 
+            border: 1px solid var(--sakura-medium-pink-val);
+            border-radius: 6px; background-color: rgba(255, 255, 255, 0.9); 
+            color: #8B6B61; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #country-dropdown:focus, #country-dropdown:focus-visible {
+            outline: 2px solid var(--sakura-pink-val); border-color: var(--sakura-deep-pink-val);
+        }
+        #critical-error-display { display:none; position: fixed; top:0; left:0; width:100%; background-color:red; color:white; padding:10px; z-index:2000; text-align:center; }
+    </style>
+    <script>
+        var ntp = {}; // NTP hack for webOS 1.4.0
+        window.onerror = function(message, source, lineno, colno, error) { 
+            console.error("GLOBAL ERROR:", message, "at", source, lineno, colno, error);
+            var ced = document.getElementById('critical-error-display');
+            if(ced) { ced.innerHTML += "JS Error: "+message+"<br>"; ced.style.display='block';}
+            return true; 
+        };
+    </script>
+</head>
+<body>
+    <div id="critical-error-display"></div>
+    <div id="globe-container"></div> 
+    
+    <audio id="clockTickSound" src="sounds/sound.wav" preload="auto"></audio>
+    <audio id="hourChimeSound" src="sounds/hour-clock.wav" preload="auto"></audio>
+
+    <div class="clock-container-to-center"> 
+        <div id="clockTimezoneLabel" class="clock-label">Loading Timezone...</div>
+        <div id="clockDetailDisplay" class="clock-details-display">
+            <span class="digital-time-main">--:--:-- --</span>
+            <span class="time-diff-main">(--h --m)</span>
+        </div>
+        <div class="country-selector-container">
+            <label for="country-dropdown">Select a Location:</label>
+            <select id="country-dropdown">
+                <option value="">-- Select Location --</option>
+            </select>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        // --- Configuration ---
+        var GLOBE_ENABLED = true; // Set to false if globe is too slow on TV
+
+        $(document).ready(function () {
+            console.log('jQuery Ready.');
+            
+            // --- Globe Initialization ---
+            var scene, camera, renderer_globe, globe_mesh, controls_globe_three; // Renamed to avoid conflict
+            function initThreeGlobe() {
+                if (!GLOBE_ENABLED || typeof THREE === 'undefined' || typeof THREE.OrbitControls === 'undefined') {
+                    console.warn("Globe disabled or Three.js/OrbitControls not loaded.");
+                    $('#globe-container').hide();
+                    return;
+                }
+                try {
+                    var globeContainer = document.getElementById('globe-container');
+                    if (!globeContainer) { console.error("Globe container not found!"); return; }
+                    
+                    scene = new THREE.Scene();
+                    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                    camera.position.z = 2.8; 
+
+                    renderer_globe = new THREE.WebGLRenderer({ antialias: false, alpha: true }); 
+                    renderer_globe.setSize(window.innerWidth, window.innerHeight);
+                    renderer_globe.setPixelRatio(Math.min(window.devicePixelRatio, 1)); // Lower pixelRatio for TV
+                    globeContainer.appendChild(renderer_globe.domElement);
+
+                    controls_globe_three = new THREE.OrbitControls(camera, renderer_globe.domElement);
+                    controls_globe_three.enableDamping = true; controls_globe_three.dampingFactor = 0.05; 
+                    controls_globe_three.rotateSpeed = 0.15; // Slower rotation
+                    controls_globe_three.enableZoom = false; controls_globe_three.enablePan = false;
+                
+                    // Simplified Earth
+                    var geometry = new THREE.SphereGeometry(1, 32, 32); // Lower poly
+                    var material = new THREE.MeshPhongMaterial({
+                        map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'), // Consider 1024px version
+                        shininess: 5 
+                    });
+                    globe_mesh = new THREE.Mesh(geometry, material); 
+                    scene.add(globe_mesh);
+                    
+                    scene.add(new THREE.AmbientLight(0xcccccc, 0.7)); 
+                    var directionalLight = new THREE.DirectionalLight(0xffffff, 0.6); 
+                    directionalLight.position.set(5, 3, 5); scene.add(directionalLight);
+                    
+                    window.addEventListener('resize', onWindowResizeGlobe);
+                    animateThreeGlobe();
+                    console.log("3D Globe initialized.");
+                } catch(e) {
+                    console.error("Error initializing 3D Globe:", e);
+                    $('#globe-container').hide(); // Hide globe if it errors
+                }
+            }
+            function onWindowResizeGlobe() {
+                if (camera && renderer_globe) {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer_globe.setSize(window.innerWidth, window.innerHeight);
+                }
+            }
+            function animateThreeGlobe() {
+                if (!GLOBE_ENABLED || !renderer_globe || !scene || !camera) return;
+                requestAnimationFrame(animateThreeGlobe);
+                try {
+                    if (controls_globe_three) controls_globe_three.update();
+                    if (globe_mesh) globe_mesh.rotation.y += 0.0003; 
+                    renderer_globe.render(scene, camera);
+                } catch (e) { console.error("Error in globe animation loop:", e); }
+            }
+            // --- End Globe ---
+
+            var activeTimezone = ''; 
+            var clockInterval; 
+            var userLocalTimezone = 'UTC'; 
+            var userLocalOffsetMinutesFromUTC = 0; 
+            var lastHourChimePlayedFor = -1; 
+            var tickSound = document.getElementById('clockTickSound');
+            var hourSound = document.getElementById('hourChimeSound');
+            var isUsingFallbackTime = false; 
+
+            // IMPORTANT: REPLACE THIS with your full, sorted list of timezones
+            var countryTimezones = [
+                { name: "Japan (Tokyo)", timezone: "Asia/Tokyo" },
+                { name: "India (IST)", timezone: "Asia/Kolkata" },
+                { name: "United Kingdom (London)", timezone: "Europe/London" },
+                { name: "United States (New York)", timezone: "America/New_York" },
+                { name: "United States (Los Angeles)", timezone: "America/Los_Angeles" },
+                { name: "Germany (Berlin)", timezone: "Europe/Berlin" },
+                { name: "Australia (Sydney)", timezone: "Australia/Sydney" },
+                { name: "UTC", timezone: "UTC" }
+            ];
+            countryTimezones.sort(function(a,b) { var nA=a.name.toUpperCase(), nB=b.name.toUpperCase(); if(nA<nB)return -1; if(nA>nB)return 1; return 0;});
+            
+            // --- Core Clock & Timezone Functions (ES5 Compliant) ---
+            function getTimeComponents(timezoneToParse) {
+                var h, m, s; var didFallback = false;
+                try {
+                    var now = new Date();
+                    if (typeof Intl!=='undefined' && Intl.DateTimeFormat && typeof Intl.DateTimeFormat.prototype.formatToParts==='function') {
+                        var formatter = new Intl.DateTimeFormat('en-GB', {timeZone:timezoneToParse, hour:'numeric',minute:'numeric',second:'numeric',hour12:false});
+                        var parts = formatter.formatToParts(now); var timeParts = {};
+                        for(var i=0; i<parts.length; i++){ var p=parts[i]; if(['hour','minute','second'].indexOf(p.type)>-1) timeParts[p.type]=parseInt(p.value,10); }
+                        h=timeParts.hour; m=timeParts.minute; s=timeParts.second;
+                        if(isNaN(h)||isNaN(m)||isNaN(s)) throw new Error("Intl NaN for " + timezoneToParse);
+                    } else { throw new Error("Intl formatToParts unreliable"); }
+                } catch (e) {
+                    didFallback = true; var nowFb = new Date();
+                    h=nowFb.getHours(); m=nowFb.getMinutes(); s=nowFb.getSeconds();
+                }
+                return { hours: h, minutes: m, seconds: s, fallback: didFallback };
+            }
+
+            function getDigitalTimeFormatted(timezoneToDisplay) {
+                var timeString = "--:--:-- --"; var usedFallback = false;
+                try {
+                    var now = new Date();
+                    var components = getTimeComponents(timezoneToDisplay); // Use our robust component getter
+                    usedFallback = components.fallback;
+                    var h = components.hours; var m = components.minutes; var s = components.seconds;
+                    var ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12; h = h ? h : 12; 
+                    m = m < 10 ? '0'+m : m; s = s < 10 ? '0'+s : s;
+                    timeString = h + ':' + m + ':' + s + ' ' + ampm;
+                    if (usedFallback) {
+                        // If getTimeComponents fell back, this digital time is also local
+                        // The global isUsingFallbackTime will be set by getTimeComponents call in updateClockDisplaysAndSounds
+                    }
+                } catch (e) { // Should ideally not happen if getTimeComponents is robust
+                    usedFallback = true; var nowFb = new Date();
+                    var hFb=nowFb.getHours();var mFb=nowFb.getMinutes();var sFb=nowFb.getSeconds();
+                    var ampmFb=hFb>=12?'PM':'AM';hFb=hFb%12;hFb=hFb?hFb:12;mFb=mFb<10?'0'+mFb:mFb;sFb=sFb<10?'0'+sFb:sFb;
+                    timeString = hFb+':'+mFb+':'+sFb+' '+ampmFb;
+                }
+                return { time: timeString, fallback: usedFallback }; // Return object
+            }
+            
+            function updateClockDisplaysAndSounds() {
+                if (!activeTimezone) return;
+                var timeComps = getTimeComponents(activeTimezone);
+                isUsingFallbackTime = timeComps.fallback; // Update global fallback status
+
+                var digitalTimeResult = getDigitalTimeFormatted(activeTimezone); // This uses getTimeComponents internal logic too
+                var $digitalTimeEl = $('#clockDetailDisplay .digital-time-main');
+                var $clockLabelEl = $('#clockTimezoneLabel');
+                $digitalTimeEl.text(digitalTimeResult.time);
+
+                if (isUsingFallbackTime) { 
+                    $digitalTimeEl.addClass('fallback'); $clockLabelEl.addClass('fallback');
+                } else {
+                    $digitalTimeEl.removeClass('fallback'); $clockLabelEl.removeClass('fallback');
+                }
+
+                // Sounds
+                if (tickSound && typeof tickSound.play === 'function') {
+                    tickSound.currentTime = 0;
+                    tickSound.play().catch(function(e){/*silent*/}); 
+                }
+                if (timeComps.minutes === 0 && timeComps.seconds === 0) {
+                    if (timeComps.hours !== lastHourChimePlayedFor) {
+                        if (hourSound && typeof hourSound.play === 'function') {
+                            hourSound.currentTime = 0;
+                            hourSound.play().catch(function(e){ console.warn("Hour chime err: "+e.message); });
+                            lastHourChimePlayedFor = timeComps.hours;
+                        }
+                    }
+                }
+            }
+
+            function setClockTimezone(timezone, label) {
+                console.log("Set TZ: " + label);
+                activeTimezone = timezone;
+                var $clockLabelEl = $('#clockTimezoneLabel');
+                $clockLabelEl.text(label || timezone.split('/').pop().replace(/_/g, ' ')).removeClass('fallback');
+                $('#clockDetailDisplay .digital-time-main').removeClass('fallback');
+                
+                // Time difference display (simplified)
+                var diffString = "(Time diff N/A)"; 
+                if (timezone === userLocalTimezone) { diffString = "(Your local time)"; }
+                $('#clockDetailDisplay .time-diff-main').text(diffString);
+
+                if (clockInterval) clearInterval(clockInterval);
+                lastHourChimePlayedFor = -1; // Reset for new timezone
+                
+                updateClockDisplaysAndSounds(); // Initial update for new timezone
+                clockInterval = setInterval(updateClockDisplaysAndSounds, 1000);
+            }
+
+            function populateCountryDropdown() {
+                console.log("Populating dropdown");
+                var $dropdown = $('#country-dropdown'); 
+                $dropdown.empty().append($('<option>', { value: "", text: "-- Select Location --"}));
+                var detectedUserTimezone = 'UTC'; 
+                try {
+                    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions) {
+                        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone; 
+                        if (tz && typeof tz === 'string' && tz.length > 2) detectedUserTimezone = tz;
+                    }
+                } catch(e) { console.warn("Err detect localTZ: " + e.message);}
+                userLocalTimezone = detectedUserTimezone; 
+                
+                var localInList = null; 
+                for (var k=0; k < countryTimezones.length; k++) { if (countryTimezones[k].timezone === userLocalTimezone) { localInList = countryTimezones[k]; break; }}
+                var localDN = localInList ? localInList.name + " (Local)" : "Your Local (" + userLocalTimezone.split('/').pop().replace(/_/g,' ') + ")";
+                var localDL = localInList ? localInList.name : userLocalTimezone.split('/').pop().replace(/_/g,' ');
+                $dropdown.append($('<option>',{value:userLocalTimezone, text:localDN, 'data-label':localDL, 'data-istrulyuserlocal':'true'}));
+                
+                for(var i=0; i < countryTimezones.length; i++) { 
+                    if (countryTimezones[i].timezone !== userLocalTimezone) { 
+                        $dropdown.append($('<option>',{value:countryTimezones[i].timezone, text:countryTimezones[i].name, 'data-label':countryTimezones[i].name}));
+                    }
+                }
+                try { $dropdown.val(userLocalTimezone); } catch (e) { /*ignore*/ }
+                $dropdown.trigger('change'); 
+            }
+
+            $('#country-dropdown').on('change', function() {
+                var selectedOption = $(this).find('option:selected'); 
+                var selectedTimezone = selectedOption.val(); 
+                var finalLabelToDisplay = selectedOption.attr('data-label') || selectedOption.text(); 
+                if (selectedTimezone && selectedTimezone !== "") {
+                    setClockTimezone(selectedTimezone, finalLabelToDisplay);
+                } else { 
+                    if (clockInterval) clearInterval(clockInterval);
+                    $('#clockTimezoneLabel').text("Select Location").removeClass('fallback');
+                    $('#clockDetailDisplay .digital-time-main').text("--:--:-- --").removeClass('fallback');
+                    $('#clockDetailDisplay .time-diff-main').text("(--h --m)");
+                }
+            });
+
+            // --- Idle State Logic ---
+            var idleTimer; var IDLE_TIMEOUT = 20000; var FADE_DURATION = 500;
+            var $uiToFade = $('#clockTimezoneLabel, #clockDetailDisplay, .country-selector-container');
+            function enterIdleState() { $uiToFade.fadeOut(FADE_DURATION); $('body').css('cursor','none'); }
+            function exitIdleStateAndResetTimer() {
+                if (!$uiToFade.first().is(':visible') && !$uiToFade.first().is(':animated')) { $uiToFade.fadeIn(FADE_DURATION); }
+                $('body').css('cursor','auto'); clearTimeout(idleTimer); idleTimer = setTimeout(enterIdleState, IDLE_TIMEOUT);
+            }
+            exitIdleStateAndResetTimer(); 
+            $(document).on('mousemove mousedown keydown click focus', exitIdleStateAndResetTimer);
+
+            // --- Initial Setup ---
+            initThreeGlobe(); // Initialize Globe
+            try { populateCountryDropdown(); console.log("Initial setup done."); } 
+            catch (e) { console.error("CRIT ERR setup: " + e.message); $('#clockTimezoneLabel').text("Error Loading").css('color', 'red');}
+        });
+        console.log('Main script block finished.');
+    </script>
+</body>
+</html>

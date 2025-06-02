@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big Digital Clock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        html, body {
+            width: 100%; height: 100%; margin: 0; padding: 0;
+            background-color: #000000; color: #E5E7EB; 
+            font-family: 'Roboto Mono', monospace; overflow: hidden;
+        }
+        body {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+        }
+        
+        .clock-display-container { padding: 20px; }
+
+        #digital-time {
+            font-size: 18vh; font-weight: 700; line-height: 1;
+            color: #666; /* Initial dimmed color */
+            text-shadow: 0 0 8px rgba(100,100,100,0.2);
+            transition: color 0.5s, text-shadow 0.5s;
+        }
+        #digital-time.active { /* Style when clock is running */
+            color: #FFF9FB; 
+            text-shadow: 0 0 8px rgba(255,255,255,0.2);
+        }
+
+        .time-separator { color: #666; padding: 0 0.05em;}
+        #digital-time.active .time-separator { color: #8B6B61; }
+        .time-ampm { font-size: 0.3em; vertical-align: text-top; padding-left: 0.1em; }
+        
+        #start-button-container { margin-top: 30px; }
+        #startClockButton {
+            font-size: 24px; /* Larger button for TV */
+            padding: 15px 30px;
+            cursor: pointer;
+            background-color: #4CAF50; /* Green */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        #startClockButton:focus, #startClockButton:hover {
+            background-color: #45a049;
+        }
+        #critical-error-display { /* ... (same hidden debug style) ... */ }
+    </style>
+    <script>
+        var ntp = {}; 
+        window.onerror = function(message, source, lineno, colno, error) { console.error("GLOBAL ERROR:", message); return true; };
+    </script>
+</head>
+<body>
+    <div id="critical-error-display"></div>
+    
+    <audio id="clockTickSound" src="sounds/sound.wav" preload="auto"></audio>
+    <audio id="hourChimeSound" src="sounds/hour-clock.wav" preload="auto"></audio>
+
+    <div class="clock-display-container"> 
+        <div id="digital-time">
+            Click Start
+            </div>
+    </div>
+    
+    <div id="start-button-container">
+        <button id="startClockButton">Start Clock</button>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            console.log('Page Ready. Waiting for user to start clock.');
+            
+            var $digitalTimeEl = $('#digital-time');
+            var $startButtonContainer = $('#start-button-container');
+            var $startClockButton = $('#startClockButton');
+
+            if(!$digitalTimeEl.length || !$startClockButton.length) {
+                console.error("Required HTML elements not found!");
+                return; 
+            }
+
+            var clockInterval; 
+            var lastHourChimePlayedFor = -1; 
+            var tickSound = document.getElementById('clockTickSound');
+            var hourSound = document.getElementById('hourChimeSound');
+            var clockStarted = false;
+            var tickErrorLogged = false;
+
+            var digitColors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#C77DFF', '#FFB2C6', '#FFA500', '#32CD32', '#1E90FF', '#FF69B4'];
+            var colorIndex = 0;
+
+            function getNextColor() {
+                var color = digitColors[colorIndex];
+                colorIndex = (colorIndex + 1) % digitColors.length;
+                return color;
+            }
+            
+            function updateClockDisplay() {
+                if (!clockStarted) return; // Don't update if clock hasn't been started
+
+                try {
+                    var now = new Date(); 
+                    var hours = now.getHours(); var minutes = now.getMinutes(); var seconds = now.getSeconds();
+                    var ampm = hours >= 12 ? 'PM' : 'AM';
+                    var displayHours = hours % 12; displayHours = displayHours ? displayHours : 12; 
+                    
+                    var H_str = displayHours < 10 ? '0' + displayHours : displayHours.toString();
+                    var M_str = minutes < 10 ? '0' + minutes : minutes.toString();
+                    var S_str = seconds < 10 ? '0' + seconds : seconds.toString();
+
+                    colorIndex = 0; 
+                    var html = '';
+                    for (var i = 0; i < H_str.length; i++) { html += '<span style="color:' + getNextColor() + ';">' + H_str[i] + '</span>'; }
+                    html += '<span class="time-separator">:</span>';
+                    for (var i = 0; i < M_str.length; i++) { html += '<span style="color:' + getNextColor() + ';">' + M_str[i] + '</span>'; }
+                    html += '<span class="time-separator">:</span>';
+                    for (var i = 0; i < S_str.length; i++) { html += '<span style="color:' + getNextColor() + ';">' + S_str[i] + '</span>'; }
+                    html += ' <span class="time-ampm" style="color:' + getNextColor() + ';">';
+                    for (var i = 0; i < ampm.length; i++) { html += ampm[i]; }
+                    html += '</span>';
+                    $digitalTimeEl.html(html);
+
+                    // Sound: Tick-tock
+                    if (tickSound && typeof tickSound.play === 'function' && tickSound.readyState >= 2) {
+                        tickSound.currentTime = 0;
+                        var prom1 = tickSound.play();
+                        if(prom1 && typeof prom1.catch === 'function'){
+                           prom1.catch(function(e){ if(!tickErrorLogged) { console.warn("Tick sound error:", e.name); tickErrorLogged = true;}});
+                        }
+                    }
+                    
+                    // Sound: Hourly Chime
+                    if (minutes === 0 && seconds === 0) {
+                        if (hours !== lastHourChimePlayedFor) { 
+                            if (hourSound && typeof hourSound.play === 'function' && hourSound.readyState >= 2) {
+                                hourSound.currentTime = 0;
+                                var prom2 = hourSound.play();
+                                if(prom2 && typeof prom2.catch === 'function'){ prom2.catch(function(e){ console.error("Chime error:", e.name); });}
+                                lastHourChimePlayedFor = hours;
+                            }
+                        }
+                    }
+                } catch (e_update) {
+                    console.error("Error in updateClockDisplay: " + e_update.message);
+                    if (clockInterval) clearInterval(clockInterval); 
+                }
+            }
+
+            $startClockButton.on('click', function() {
+                console.log("Start Clock button clicked.");
+                clockStarted = true;
+                $digitalTimeEl.addClass('active'); // Activate clock styles
+                $startButtonContainer.hide(); // Hide the button
+
+                // Attempt to "unlock" audio by playing a sound briefly (and muted initially)
+                // This can sometimes help with subsequent plays.
+                if (tickSound && typeof tickSound.play === 'function') {
+                    var originalVolume = tickSound.volume;
+                    tickSound.volume = 0; // Mute it
+                    tickSound.currentTime = 0;
+                    var playPromise = tickSound.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(function() {
+                            tickSound.pause();
+                            tickSound.currentTime = 0;
+                            tickSound.volume = originalVolume; // Unmute
+                            console.log("Tick sound context likely initialized.");
+                        }).catch(function(error) {
+                            tickSound.volume = originalVolume; // Unmute
+                            console.warn("Could not initialize tick sound context on click:", error.name, error.message);
+                        });
+                    } else {
+                         tickSound.volume = originalVolume;
+                    }
+                }
+                 if (hourSound && typeof hourSound.play === 'function') { // Also for chime
+                    var originalChimeVolume = hourSound.volume;
+                    hourSound.volume = 0;
+                    hourSound.currentTime = 0;
+                    var chimePromise = hourSound.play();
+                     if (chimePromise !== undefined) {
+                        chimePromise.then(function(){ hourSound.pause(); hourSound.currentTime = 0; hourSound.volume = originalChimeVolume; })
+                                    .catch(function(){ hourSound.volume = originalChimeVolume; });
+                    } else {
+                         hourSound.volume = originalChimeVolume;
+                    }
+                }
+
+
+                if (clockInterval) clearInterval(clockInterval); 
+                clockInterval = setInterval(updateClockDisplay, 1000);
+                updateClockDisplay(); // Initial call to display time immediately
+                console.log("Clock started after button click.");
+                
+                // Idle state logic removed for this version focusing on sound start
+            });
+        });
+        console.log('Main script block finished.');
+    </script>
+</body>
+</html>

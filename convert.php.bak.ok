@@ -1,0 +1,72 @@
+<?php
+require 'vendor/autoload.php';
+
+use Anuzpandey\LaravelNepaliDate\LaravelNepaliDate;
+
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Content-Type");
+header('Content-Type: application/json');
+
+// Translation helpers
+function translateToNepali($value, $type = 'day') {
+    $days = ['Sunday' => 'आइतबार', 'Monday' => 'सोमबार', 'Tuesday' => 'मंगलबार', 'Wednesday' => 'बुधबार', 'Thursday' => 'बिहीबार', 'Friday' => 'शुक्रबार', 'Saturday' => 'शनिबार'];
+    $months = [1 => 'बैशाख', 2 => 'जेठ', 3 => 'असार', 4 => 'श्रावण', 5 => 'भदौ', 6 => 'आश्विन', 7 => 'कार्तिक', 8 => 'मंसिर', 9 => 'पौष', 10 => 'माघ', 11 => 'फाल्गुन', 12 => 'चैत्र'];
+    if ($type === 'day') return $days[$value] ?? $value;
+    if ($type === 'month') return $months[(int)$value] ?? $value;
+    return $value;
+}
+
+try {
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (!$input || !isset($input['type'], $input['date'])) {
+        throw new Exception('Invalid request format');
+    }
+
+    $type = $input['type'];
+    $rawDate = $input['date'];
+    $locale = in_array($input['locale'] ?? 'en', ['en', 'ne']) ? $input['locale'] : 'en';
+
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate)) {
+        throw new Exception('Invalid date format. Use YYYY-MM-DD');
+    }
+
+    if ($type === 'engToNep') {
+        // Convert English (Gregorian) to Nepali date
+        $nepaliDate = LaravelNepaliDate::from($rawDate)->toNepaliDate(format: 'D, j F Y', locale: $locale);
+
+        $response = [
+            'success' => true,
+            'input' => $input,
+            'result' => [
+                'formatted' => $nepaliDate,
+                'locale' => $locale,
+            ]
+        ];
+    } elseif ($type === 'nepToEng') {
+        // Convert Nepali to English (Gregorian)
+        $englishDate = LaravelNepaliDate::from($rawDate)->toEnglishDate(format: 'l, j F Y', locale: $locale);
+
+        $response = [
+            'success' => true,
+            'input' => $input,
+            'result' => [
+                'formatted' => $englishDate,
+                'locale' => $locale,
+            ]
+        ];
+    } else {
+        throw new Exception("Unsupported conversion type: $type");
+    }
+
+} catch (Throwable $e) {
+    http_response_code(400);
+    $response = [
+        'success' => false,
+        'error' => $e->getMessage(),
+        'input' => $input ?? null
+    ];
+}
+
+echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+

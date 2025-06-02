@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Clock with 3D Globe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mukta+Vaani:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans:wght@400;700&family=Roboto+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        :root {
+            /* Color Palette & Sizing Variables */
+            --sakura-white: #FFF9FB; --sakura-light-pink: #FFEFF2; --sakura-pink: #FFC2D1;
+            --sakura-medium-pink: #FFB2C6; --sakura-deep-pink: #E6A4B4; --branch-brown: #8B6B61;
+            --hand-dark: #5C5C5C; --second-hand-accent: #F57187;
+            --hand-hour-color: var(--hand-dark); --hand-minute-color: var(--hand-dark);
+            --hand-second-color: var(--second-hand-accent); --spoke-color: var(--branch-brown);
+            --center-dot-color: var(--hand-dark); --label-color: var(--sakura-deep-pink);
+            --dropdown-bg: rgba(255, 255, 255, 0.9); --dropdown-border: var(--sakura-medium-pink);
+            --dropdown-text: var(--branch-brown); --digital-font-family: 'Roboto Mono', monospace;
+            --digital-time-color: var(--hand-dark); --digital-time-diff-color: #6a4a40;
+            --digital-display-bg: rgba(255, 239, 242, 0.65);
+            --digital-display-border: rgba(230, 164, 180, 0.7);
+            --digital-display-shadow: rgba(0, 0, 0, 0.1);
+            --ball-numeral-font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+            --ball-numeral-color: var(--hand-dark);
+            --clock-size: 65vmin; --ball-size: calc(var(--clock-size) * 0.075);
+            --ball-numeral-font-size: calc(var(--ball-size) * 0.40);
+            --spoke-width: calc(var(--clock-size) * 0.009);
+            --center-dot-size: calc(var(--clock-size) * 0.055);
+            --hand-hour-width: calc(var(--clock-size) * 0.022);
+            --hand-minute-width: calc(var(--clock-size) * 0.017);
+            --hand-second-width: calc(var(--clock-size) * 0.006);
+        }
+        body {
+            font-family: 'Noto Sans', 'Noto Sans JP', 'Mukta Vaani', Arial, sans-serif;
+            background-color: #111827; /* Dark background for the globe */
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; box-sizing: border-box;
+            color: #E5E7EB; overflow: hidden; position: relative;
+        }
+        #globe-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; /* Globe is background */
+        }
+        .geographic-label {
+            position: absolute; color: white; font-family: Arial, sans-serif;
+            font-size: 12px; pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            transition: opacity 0.3s; z-index: 1;
+        }
+        .clock-wrapper {
+            position: relative; z-index: 10; display: flex; flex-direction: column;
+            align-items: center; padding: 20px;
+            background-color: rgba(17, 24, 39, 0.2);
+            border-radius: 15px; max-height: 95vh; overflow-y: auto;
+        }
+        .clock-main-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .analog-clock { width: var(--clock-size); height: var(--clock-size); position: relative; background-color: transparent; border: none; margin-bottom: 10px;}
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; z-index: 10; border-radius: calc(var(--clock-size) * 0.005); }
+        .hour-hand { width: var(--hand-hour-width); height: 22%; margin-left: calc(var(--hand-hour-width) / -2); background-color: var(--hand-hour-color); z-index: 12; }
+        .minute-hand { width: var(--hand-minute-width); height: 32%; margin-left: calc(var(--hand-minute-width) / -2); background-color: var(--hand-minute-color); z-index: 11; }
+        .second-hand { width: var(--hand-second-width); height: 38%; margin-left: calc(var(--hand-second-width) / -2); background-color: var(--hand-second-color); z-index: 13; }
+        .center-dot { width: var(--center-dot-size); height: var(--center-dot-size); background-color: var(--center-dot-color); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 14; box-shadow: 0 0 calc(var(--clock-size) * 0.01) rgba(0,0,0,0.2); }
+        .spoke { position: absolute; bottom: 50%; left: 50%; width: var(--spoke-width); height: 48%; background-color: var(--spoke-color); transform-origin: bottom center; z-index: 6; margin-left: calc(var(--spoke-width) / -2); border-radius: calc(var(--spoke-width) / 2); }
+        .ball {
+            position: absolute; width: var(--ball-size); height: var(--ball-size); border-radius: 50%; z-index: 7;
+            transform: translate(-50%, -50%);
+            box-shadow: inset calc(var(--ball-size) * 0.07) calc(var(--ball-size) * 0.07) calc(var(--ball-size) * 0.18) rgba(0,0,0,0.1),
+                        calc(var(--ball-size) * 0.03) calc(var(--ball-size) * 0.03) calc(var(--ball-size) * 0.1) rgba(0,0,0,0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--ball-numeral-font-family); font-size: var(--ball-numeral-font-size);
+            font-weight: 700; color: var(--ball-numeral-color); user-select: none;
+            overflow: hidden; line-height: 1; text-align: center;
+        }
+        .clock-label {
+            font-size: clamp(1.1rem, calc(var(--clock-size) * 0.075), 2.7rem); font-weight: bold;
+            color: var(--label-color); text-shadow: 1px 1px 2px rgba(0,0,0,0.3), 0 0 5px var(--label-color);
+            z-index: 15; text-align: center; margin-bottom: 8px;
+        }
+        #clockDetailDisplay {
+            text-align: center; margin-bottom: 25px; padding: 10px 20px;
+            background-color: var(--digital-display-bg); border-radius: 8px;
+            border: 1px solid var(--digital-display-border); display: inline-block;
+            box-shadow: 0 2px 4px var(--digital-display-shadow); min-width: 260px;
+            line-height: 1.4;
+        }
+        .digital-time-main {
+            font-family: var(--digital-font-family);
+            font-size: clamp(1.2rem, calc(var(--clock-size) * 0.055), 1.8rem);
+            font-weight: 500; color: var(--digital-time-color); letter-spacing: 1.5px;
+            display: block; margin-bottom: 5px;
+        }
+        .time-diff-main {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: clamp(0.75rem, calc(var(--clock-size) * 0.035), 0.9rem);
+            color: var(--digital-time-diff-color); display: block;
+        }
+        .country-selector-container {
+            display: flex; flex-direction: column; align-items: center;
+            margin-top: 10px; width: 100%; max-width: 380px;
+        }
+        .country-selector-container label {
+            margin-bottom: 8px; font-size: 0.9rem;
+            color: var(--sakura-light-pink); font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        #country-dropdown {
+            width: 100%; padding: 8px 10px; font-size: 0.9rem;
+            border: 1px solid var(--dropdown-border); border-radius: 6px;
+            background-color: var(--dropdown-bg); color: var(--dropdown-text);
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #country-dropdown:focus {
+            outline: none; border-color: var(--sakura-deep-pink);
+            box-shadow: 0 0 0 3px rgba(230, 164, 180, 0.3);
+        }
+        @media (max-width: 500px) {
+            :root { --clock-size: 80vmin; }
+            .clock-label { font-size: clamp(1rem, calc(var(--clock-size) * 0.07), 2.2rem); }
+            #clockDetailDisplay { padding: 8px 12px; min-width: 220px; }
+            .digital-time-main { font-size: clamp(1rem, calc(var(--clock-size) * 0.05), 1.5rem); }
+            .time-diff-main { font-size: clamp(0.7rem, calc(var(--clock-size) * 0.03), 0.8rem); }
+            #country-dropdown { font-size: 0.85rem; padding: 6px 8px;}
+            .country-selector-container { max-width: 300px;}
+        }
+    </style>
+</head>
+<body>
+    <audio id="clockTickSound" src="sounds/sound.wav" preload="auto"></audio>
+    <audio id="hourChimeSound" src="sounds/hour-clock.wav" preload="auto"></audio>
+
+    <div id="globe-container"></div>
+    <div class="clock-wrapper">
+        <div class="clock-main-container">
+            <div id="worldAnalogClock" class="analog-clock">
+                <div class="hand hour-hand"></div> <div class="hand minute-hand"></div> <div class="hand second-hand"></div> <div class="center-dot"></div>
+                <?php
+                $roman_numerals_map = [
+                    1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI',
+                    7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
+                ];
+                $ball_colors = [
+                    '#FFFFFF', '#FFEFF2', '#FFDFE6', '#FFC2D1', '#FFB2C6', '#FBCFE8',
+                    '#FFFFFF', '#FFEFF2', '#E6A4B4', '#FFC2D1', '#FFB2C6', '#F9A8D4'
+                ];
+                $marker_radius_percent = 40;
+                $num_elements = 12;
+                for ($h = 1; $h <= $num_elements; $h++):
+                    $spoke_rotation_css_deg = ($h % 12) * 30;
+                    $positioning_math_angle_deg = $spoke_rotation_css_deg - 90;
+                    $positioning_angle_rad = deg2rad($positioning_math_angle_deg);
+                    $x_marker = 50 + ($marker_radius_percent * cos($positioning_angle_rad));
+                    $y_marker = 50 + ($marker_radius_percent * sin($positioning_angle_rad));
+                    $current_ball_color = $ball_colors[($h - 1) % count($ball_colors)];
+                ?>
+                    <div class="spoke" style="transform: rotate(<?php echo $spoke_rotation_css_deg; ?>deg);"></div>
+                    <div class="ball"
+                         style="top: <?php echo $y_marker; ?>%; left: <?php echo $x_marker; ?>%; background-color: <?php echo $current_ball_color; ?>;">
+                        <?php echo $roman_numerals_map[$h]; ?>
+                    </div>
+                <?php endfor; ?>
+            </div>
+            <div id="clockTimezoneLabel" class="clock-label">Loading...</div>
+            <div id="clockDetailDisplay" class="clock-details-display">
+                <span class="digital-time-main">--:--:-- --</span>
+                <span class="time-diff-main">(--h --m)</span>
+            </div>
+        </div>
+        <div class="country-selector-container">
+            <label for="country-dropdown">Select a Location:</label>
+            <select id="country-dropdown">
+                <option value="">-- Select Location --</option>
+            </select>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <script>
+        console.log("Main script tag reached. jQuery should be loaded before this line.");
+
+        // ==== START OF THREE.JS GLOBE SCRIPT ====
+        let scene, camera, renderer, globe, controls_globe;
+        const geographic_labels = [];
+        const geographicLabelContainer = document.createElement('div');
+        geographicLabelContainer.className = 'geographic-label-container';
+        geographicLabelContainer.style.position = 'fixed';
+        geographicLabelContainer.style.top = '0'; geographicLabelContainer.style.left = '0';
+        geographicLabelContainer.style.width = '100%'; geographicLabelContainer.style.height = '100%';
+        geographicLabelContainer.style.pointerEvents = 'none'; geographicLabelContainer.style.zIndex = '1';
+
+        async function initGlobe() {
+            console.log("Globe Script: initGlobe() called");
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 2.8;
+
+            const globeContainer = document.getElementById('globe-container');
+            if (!globeContainer) {
+                console.error("Globe Script FATAL: #globe-container DIV not found in HTML!");
+                return;
+            }
+            try {
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                globeContainer.appendChild(renderer.domElement);
+            } catch(e) {
+                console.error("Globe Script FATAL: Error creating WebGLRenderer or appending to container:", e);
+                return;
+            }
+
+            if (geographicLabelContainer.parentNode !== document.body) {
+                document.body.appendChild(geographicLabelContainer);
+            }
+
+            try {
+                controls_globe = new THREE.OrbitControls(camera, renderer.domElement);
+                controls_globe.enableDamping = true; controls_globe.dampingFactor = 0.03;
+                controls_globe.rotateSpeed = 0.3; controls_globe.enableZoom = false; controls_globe.enablePan = false;
+            } catch(e) {
+                console.error("Globe Script FATAL: Error creating OrbitControls. Is OrbitControls.js loaded correctly before this script block?", e);
+                return;
+            }
+
+            createEarth(); createAtmosphere(); addLights();
+            window.addEventListener('resize', onWindowResizeGlobe);
+            console.log("Globe Script: initGlobe() finished successfully.");
+        }
+        async function addGeographicLabels() { /* Intentionally empty for now */ }
+        function createGeographicLabel(text, lat, lng, type = 'country') {
+            const labelEl = document.createElement('div');
+            labelEl.className = 'geographic-label';
+            labelEl.textContent = text;
+            geographicLabelContainer.appendChild(labelEl);
+            geographic_labels.push({ element: labelEl, lat: THREE.MathUtils.degToRad(lat), lng: THREE.MathUtils.degToRad(lng), type: type });
+        }
+        function updateGeographicLabels() { /* Only call if geographic_labels is populated */ }
+
+        function createEarth() {
+            try {
+                const geometry = new THREE.SphereGeometry(1, 64, 64);
+                const material = new THREE.MeshPhongMaterial({
+                    map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'),
+                    bumpMap: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_bump_2048.jpg'),
+                    bumpScale: 0.005,
+                    specularMap: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg'),
+                    specular: new THREE.Color('grey'), shininess: 10
+                });
+                globe = new THREE.Mesh(geometry, material); scene.add(globe);
+            } catch(e) { console.error("Globe Script FATAL: Error in createEarth():", e); }
+        }
+        function createAtmosphere() {
+            const geometry = new THREE.SphereGeometry(1.025, 64, 64);
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    "c": { type: "f", value: 0.6 }, "p": { type: "f", value: 4.0 },
+                    glowColor: { type: "c", value: new THREE.Color(0x88bbff) },
+                    viewVector: { type: "v3", value: camera ? camera.position : new THREE.Vector3(0,0,5) }
+                },
+                vertexShader: `uniform vec3 viewVector; uniform float c; uniform float p; varying float intensity; void main() { vec3 vNormal = normalize( normalMatrix * normal ); vec3 vNormel = normalize( normalMatrix * viewVector ); intensity = pow( c - dot(vNormal, vNormel), p ); gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+                fragmentShader: `uniform vec3 glowColor; varying float intensity; void main() { gl_FragColor = vec4( glowColor * intensity, intensity * 0.7 ); }`,
+                side: THREE.BackSide, blending: THREE.AdditiveBlending, transparent: true
+            });
+            scene.add(new THREE.Mesh(geometry, material));
+        }
+        function addLights() {
+            scene.add(new THREE.AmbientLight(0xcccccc, 0.5));
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 3, 5); scene.add(directionalLight);
+        }
+        function onWindowResizeGlobe() {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+        function animateGlobe() {
+            requestAnimationFrame(animateGlobe);
+            try {
+                if (controls_globe) controls_globe.update();
+                if (globe) globe.rotation.y += 0.0005;
+                // updateGeographicLabels(); // Call if you have labels to update
+                if (renderer && scene && camera) renderer.render(scene, camera);
+            } catch (e) {
+                console.error("Error in animateGlobe loop:", e);
+            }
+        }
+        // ==== END OF THREE.JS GLOBE SCRIPT ====
+
+        // ==== START OF WORLD CLOCK SCRIPT ====
+        $(document).ready(function () {
+            console.log("jQuery Document Ready: Starting initializations.");
+            try {
+                console.log("Attempting to initialize globe from jQuery ready...");
+                if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
+                    initGlobe();
+                    animateGlobe();
+                    console.log("Globe initialization and animation calls made from jQuery ready.");
+                } else {
+                    console.error("THREE.js or OrbitControls not loaded when trying to initGlobe from ready().");
+                }
+            } catch(e) {
+                console.error("ERROR during Globe initialization or animation start from jQuery ready:", e);
+            }
+
+            console.log("Clock Script: Initializing clock variables...");
+            let activeTimezone = '';
+            let clockInterval;
+            let userLocalTimezone = 'UTC';
+            let userLocalOffsetMinutesFromUTC = null;
+            let lastHourChimePlayedFor = -1; // Variable to track the hour for which chime was played
+
+            // == IMPORTANT: Replace this placeholder with your FULL countryTimezones array, sorted alphabetically by name ==
+	    const countryTimezones = [
+	    	                { name: "Afghanistan", timezone: "Asia/Kabul" }, { name: "Albania", timezone: "Europe/Tirane" },
+                { name: "Algeria", timezone: "Africa/Algiers" }, { name: "Andorra", timezone: "Europe/Andorra" },
+                { name: "Angola", timezone: "Africa/Luanda" }, { name: "Antigua and Barbuda", timezone: "America/Antigua" },
+                { name: "Argentina", timezone: "America/Argentina/Buenos_Aires" }, { name: "Armenia", timezone: "Asia/Yerevan" },
+                { name: "Australia (Sydney)", timezone: "Australia/Sydney" }, { name: "Australia (Perth)", timezone: "Australia/Perth" },
+                { name: "Austria", timezone: "Europe/Vienna" }, { name: "Azerbaijan", timezone: "Asia/Baku" },
+                { name: "Bahamas", timezone: "America/Nassau" }, { name: "Bahrain", timezone: "Asia/Bahrain" },
+                { name: "Bangladesh", timezone: "Asia/Dhaka" }, { name: "Barbados", timezone: "America/Barbados" },
+                { name: "Belarus", timezone: "Europe/Minsk" }, { name: "Belgium", timezone: "Europe/Brussels" },
+                { name: "Belize", timezone: "America/Belize" }, { name: "Benin", timezone: "Africa/Porto-Novo" },
+                { name: "Bhutan", timezone: "Asia/Thimphu" }, { name: "Bolivia", timezone: "America/La_Paz" },
+                { name: "Bosnia and Herzegovina", timezone: "Europe/Sarajevo" }, { name: "Botswana", timezone: "Africa/Gaborone" },
+                { name: "Brazil (East)", timezone: "America/Sao_Paulo" }, { name: "Brazil (West)", timezone: "America/Manaus" },
+                { name: "Brunei", timezone: "Asia/Brunei" }, { name: "Bulgaria", timezone: "Europe/Sofia" },
+                { name: "Burkina Faso", timezone: "Africa/Ouagadougou" }, { name: "Burundi", timezone: "Africa/Bujumbura" },
+                { name: "Cabo Verde", timezone: "Atlantic/Cape_Verde" }, { name: "Cambodia", timezone: "Asia/Phnom_Penh" },
+                { name: "Cameroon", timezone: "Africa/Douala" },
+                { name: "Canada (East)", timezone: "America/Toronto" }, { name: "Canada (West)", timezone: "America/Vancouver" },
+                { name: "Central African Republic", timezone: "Africa/Bangui" }, { name: "Chad", timezone: "Africa/Ndjamena" },
+                { name: "Chile", timezone: "America/Santiago" }, { name: "China", timezone: "Asia/Shanghai" },
+                { name: "Colombia", timezone: "America/Bogota" }, { name: "Comoros", timezone: "Indian/Comoro" },
+                { name: "Congo (Brazzaville)", timezone: "Africa/Brazzaville" }, { name: "Congo (Kinshasa)", timezone: "Africa/Kinshasa" },
+                { name: "Costa Rica", timezone: "America/Costa_Rica" }, { name: "Croatia", timezone: "Europe/Zagreb" },
+                { name: "Cuba", timezone: "America/Havana" }, { name: "Cyprus", timezone: "Asia/Nicosia" },
+                { name: "Czech Republic", timezone: "Europe/Prague" }, { name: "Denmark", timezone: "Europe/Copenhagen" },
+                { name: "Djibouti", timezone: "Africa/Djibouti" }, { name: "Dominica", timezone: "America/Dominica" },
+                { name: "Dominican Republic", timezone: "America/Santo_Domingo" }, { name: "Ecuador", timezone: "America/Guayaquil" },
+                { name: "Egypt", timezone: "Africa/Cairo" }, { name: "El Salvador", timezone: "America/El_Salvador" },
+                { name: "Equatorial Guinea", timezone: "Africa/Malabo" }, { name: "Eritrea", timezone: "Africa/Asmara" },
+                { name: "Estonia", timezone: "Europe/Tallinn" }, { name: "Eswatini", timezone: "Africa/Mbabane" },
+                { name: "Ethiopia", timezone: "Africa/Addis_Ababa" }, { name: "Fiji", timezone: "Pacific/Fiji" },
+                { name: "Finland", timezone: "Europe/Helsinki" }, { name: "France", timezone: "Europe/Paris" },
+                { name: "Gabon", timezone: "Africa/Libreville" }, { name: "Gambia", timezone: "Africa/Banjul" },
+                { name: "Georgia", timezone: "Asia/Tbilisi" }, { name: "Germany", timezone: "Europe/Berlin" },
+                { name: "Ghana", timezone: "Africa/Accra" }, { name: "Greece", timezone: "Europe/Athens" },
+                { name: "Grenada", timezone: "America/Grenada" }, { name: "Guatemala", timezone: "America/Guatemala" },
+                { name: "Guinea", timezone: "Africa/Conakry" }, { name: "Guinea-Bissau", timezone: "Africa/Bissau" },
+                { name: "Guyana", timezone: "America/Guyana" }, { name: "Haiti", timezone: "America/Port-au-Prince" },
+                { name: "Honduras", timezone: "America/Tegucigalpa" }, { name: "Hungary", timezone: "Europe/Budapest" },
+                { name: "Iceland", timezone: "Atlantic/Reykjavik" }, { name: "India", timezone: "Asia/Kolkata" },
+                { name: "Indonesia (West)", timezone: "Asia/Jakarta" }, { name: "Indonesia (East)", timezone: "Asia/Jayapura" },
+                { name: "Iran", timezone: "Asia/Tehran" }, { name: "Iraq", timezone: "Asia/Baghdad" },
+                { name: "Ireland", timezone: "Europe/Dublin" }, { name: "Israel", timezone: "Asia/Jerusalem" },
+                { name: "Italy", timezone: "Europe/Rome" }, { name: "Jamaica", timezone: "America/Jamaica" },
+                { name: "Japan", timezone: "Asia/Tokyo" }, { name: "Jordan", timezone: "Asia/Amman" },
+                { name: "Kazakhstan (West)", timezone: "Asia/Aqtobe" }, { name: "Kazakhstan (East)", timezone: "Asia/Almaty" },
+                { name: "Kenya", timezone: "Africa/Nairobi" }, { name: "Kiribati", timezone: "Pacific/Tarawa" },
+                { name: "Kuwait", timezone: "Asia/Kuwait" }, { name: "Kyrgyzstan", timezone: "Asia/Bishkek" },
+                { name: "Laos", timezone: "Asia/Vientiane" }, { name: "Latvia", timezone: "Europe/Riga" },
+                { name: "Lebanon", timezone: "Asia/Beirut" }, { name: "Lesotho", timezone: "Africa/Maseru" },
+                { name: "Liberia", timezone: "Africa/Monrovia" }, { name: "Libya", timezone: "Africa/Tripoli" },
+                { name: "Liechtenstein", timezone: "Europe/Vaduz" }, { name: "Lithuania", timezone: "Europe/Vilnius" },
+                { name: "Luxembourg", timezone: "Europe/Luxembourg" }, { name: "Madagascar", timezone: "Indian/Antananarivo" },
+                { name: "Malawi", timezone: "Africa/Blantyre" }, { name: "Malaysia", timezone: "Asia/Kuala_Lumpur" },
+                { name: "Maldives", timezone: "Indian/Maldives" }, { name: "Mali", timezone: "Africa/Bamako" },
+                { name: "Malta", timezone: "Europe/Malta" }, { name: "Marshall Islands", timezone: "Pacific/Majuro" },
+                { name: "Mauritania", timezone: "Africa/Nouakchott" }, { name: "Mauritius", timezone: "Indian/Mauritius" },
+                { name: "Mexico (Central)", timezone: "America/Mexico_City" }, { name: "Mexico (Pacific)", timezone: "America/Mazatlan" },
+                { name: "Micronesia", timezone: "Pacific/Chuuk" }, { name: "Moldova", timezone: "Europe/Chisinau" },
+                { name: "Monaco", timezone: "Europe/Monaco" }, { name: "Mongolia", timezone: "Asia/Ulaanbaatar" },
+                { name: "Montenegro", timezone: "Europe/Podgorica" }, { name: "Morocco", timezone: "Africa/Casablanca" },
+                { name: "Mozambique", timezone: "Africa/Maputo" }, { name: "Myanmar", timezone: "Asia/Yangon" },
+                { name: "Namibia", timezone: "Africa/Windhoek" }, { name: "Nauru", timezone: "Pacific/Nauru" },
+                { name: "Nepal", timezone: "Asia/Kathmandu" }, { name: "Netherlands", timezone: "Europe/Amsterdam" },
+                { name: "New Zealand", timezone: "Pacific/Auckland" }, { name: "Nicaragua", timezone: "America/Managua" },
+                { name: "Niger", timezone: "Africa/Niamey" }, { name: "Nigeria", timezone: "Africa/Lagos" },
+                { name: "North Korea", timezone: "Asia/Pyongyang" }, { name: "North Macedonia", timezone: "Europe/Skopje" },
+                { name: "Norway", timezone: "Europe/Oslo" }, { name: "Oman", timezone: "Asia/Muscat" },
+                { name: "Pakistan", timezone: "Asia/Karachi" }, { name: "Palau", timezone: "Pacific/Palau" },
+                { name: "Palestine", timezone: "Asia/Gaza" }, { name: "Panama", timezone: "America/Panama" },
+                { name: "Papua New Guinea", timezone: "Pacific/Port_Moresby" }, { name: "Paraguay", timezone: "America/Asuncion" },
+                { name: "Peru", timezone: "America/Lima" }, { name: "Philippines", timezone: "Asia/Manila" },
+                { name: "Poland", timezone: "Europe/Warsaw" }, { name: "Portugal", timezone: "Europe/Lisbon" },
+                { name: "Qatar", timezone: "Asia/Qatar" }, { name: "Romania", timezone: "Europe/Bucharest" },
+                { name: "Russia (Moscow)", timezone: "Europe/Moscow" }, { name: "Russia (Vladivostok)", timezone: "Asia/Vladivostok" },
+                { name: "Rwanda", timezone: "Africa/Kigali" }, { name: "Saint Kitts and Nevis", timezone: "America/St_Kitts" },
+                { name: "Saint Lucia", timezone: "America/St_Lucia" }, { name: "Saint Vincent and the Grenadines", timezone: "America/St_Vincent" },
+                { name: "Samoa", timezone: "Pacific/Apia" }, { name: "San Marino", timezone: "Europe/San_Marino" },
+                { name: "Sao Tome and Principe", timezone: "Africa/Sao_Tome" }, { name: "Saudi Arabia", timezone: "Asia/Riyadh" },
+                { name: "Senegal", timezone: "Africa/Dakar" }, { name: "Serbia", timezone: "Europe/Belgrade" },
+                { name: "Seychelles", timezone: "Indian/Mahe" }, { name: "Sierra Leone", timezone: "Africa/Freetown" },
+                { name: "Singapore", timezone: "Asia/Singapore" }, { name: "Slovakia", timezone: "Europe/Bratislava" },
+                { name: "Slovenia", timezone: "Europe/Ljubljana" }, { name: "Solomon Islands", timezone: "Pacific/Guadalcanal" },
+                { name: "Somalia", timezone: "Africa/Mogadishu" }, { name: "South Africa", timezone: "Africa/Johannesburg" },
+                { name: "South Korea", timezone: "Asia/Seoul" }, { name: "South Sudan", timezone: "Africa/Juba" },
+                { name: "Spain", timezone: "Europe/Madrid" }, { name: "Sri Lanka", timezone: "Asia/Colombo" },
+                { name: "Sudan", timezone: "Africa/Khartoum" }, { name: "Suriname", timezone: "America/Paramaribo" },
+                { name: "Sweden", timezone: "Europe/Stockholm" }, { name: "Switzerland", timezone: "Europe/Zurich" },
+                { name: "Syria", timezone: "Asia/Damascus" }, { name: "Taiwan", timezone: "Asia/Taipei" },
+                { name: "Tajikistan", timezone: "Asia/Dushanbe" }, { name: "Tanzania", timezone: "Africa/Dar_es_Salaam" },
+                { name: "Thailand", timezone: "Asia/Bangkok" }, { name: "Timor-Leste", timezone: "Asia/Dili" },
+                { name: "Togo", timezone: "Africa/Lome" }, { name: "Tonga", timezone: "Pacific/Tongatapu" },
+                { name: "Trinidad and Tobago", timezone: "America/Port_of_Spain" }, { name: "Tunisia", timezone: "Africa/Tunis" },
+                { name: "Turkey", timezone: "Europe/Istanbul" }, { name: "Turkmenistan", timezone: "Asia/Ashgabat" },
+                { name: "Tuvalu", timezone: "Pacific/Funafuti" }, { name: "Uganda", timezone: "Africa/Kampala" },
+                { name: "Ukraine", timezone: "Europe/Kiev" }, { name: "United Arab Emirates", timezone: "Asia/Dubai" },
+                { name: "United Kingdom", timezone: "Europe/London" },
+                { name: "United States (East)", timezone: "America/New_York" }, { name: "United States (Central)", timezone: "America/Chicago" },
+                { name: "United States (West)", timezone: "America/Los_Angeles" }, { name: "United States (Hawaii)", timezone: "Pacific/Honolulu" },
+                { name: "Uruguay", timezone: "America/Montevideo" }, { name: "Uzbekistan", timezone: "Asia/Tashkent" },
+                { name: "Vanuatu", timezone: "Pacific/Efate" }, { name: "Vatican City", timezone: "Europe/Vatican" },
+                { name: "Venezuela", timezone: "America/Caracas" }, { name: "Vietnam", timezone: "Asia/Ho_Chi_Minh" },
+                { name: "Yemen", timezone: "Asia/Aden" }, { name: "Zambia", timezone: "Africa/Lusaka" },
+                { name: "Zimbabwe", timezone: "Africa/Harare" }
+	    ];
+            // If your list isn't pre-sorted, you can uncomment this:
+            // countryTimezones.sort((a, b) => a.name.localeCompare(b.name));
+            console.log("Clock Script: countryTimezones array loaded.");
+
+
+            function drawClockHands(timezone) {
+                const $analogClock = $('#worldAnalogClock');
+                if (!$analogClock.length || !timezone) return;
+
+                const now = new Date();
+                let hours, minutes, seconds;
+                let currentHour24;
+
+                try {
+                    const formatter = new Intl.DateTimeFormat('en-GB', {
+                        timeZone: timezone,
+                        hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false
+                    });
+                    const parts = formatter.formatToParts(now);
+                    const timeParts = {};
+                    parts.forEach(part => {
+                        if (['hour', 'minute', 'second'].includes(part.type)) {
+                            timeParts[part.type] = parseInt(part.value, 10);
+                        }
+                    });
+                    hours = timeParts.hour !== undefined ? timeParts.hour : 0; // This is 0-23
+                    minutes = timeParts.minute !== undefined ? timeParts.minute : 0;
+                    seconds = timeParts.second !== undefined ? timeParts.second : 0;
+                    currentHour24 = hours;
+
+                } catch (e) {
+                    console.warn("Error in drawClockHands for timezone:", timezone, "\n", e);
+                    hours = 0; minutes = 0; seconds = 0; currentHour24 = 0;
+                    $('#clockTimezoneLabel').text("Invalid Timezone");
+                }
+
+                const secondDegrees = (seconds * 6);
+                const minuteDegrees = (minutes * 6) + (seconds / 60 * 6);
+                // For analog display, use hour % 12 (or handle 0 hour as 12)
+                const displayHour = hours % 12 || 12; // handles 0 as 12, and 13-23 as 1-11
+                const hourDegrees = (displayHour * 30) + (minutes / 60 * 30);
+
+
+                $analogClock.find('.second-hand').css('transform', `rotate(${secondDegrees}deg)`);
+                $analogClock.find('.minute-hand').css('transform', `rotate(${minuteDegrees}deg)`);
+                $analogClock.find('.hour-hand').css('transform', `rotate(${hourDegrees}deg)`);
+
+                // Play tick sound
+                const tickSound = document.getElementById('clockTickSound');
+                if (tickSound) {
+                    tickSound.currentTime = 0;
+                    tickSound.play().catch(error => console.warn("Error playing tick sound:", error));
+                }
+
+                // Play hour chime sound
+                if (minutes === 0 && seconds === 0) {
+                    if (currentHour24 !== lastHourChimePlayedFor) {
+                        const hourChime = document.getElementById('hourChimeSound');
+                        if (hourChime) {
+                            console.log(`Playing hour chime for ${currentHour24}:00 in ${timezone}`);
+                            hourChime.currentTime = 0;
+                            hourChime.play().catch(error => console.warn("Error playing hour chime sound:", error));
+                            lastHourChimePlayedFor = currentHour24;
+                        }
+                    }
+                }
+            }
+
+            function getDigitalTime(timezone) {
+                try {
+                    const now = new Date();
+                    const formatter = new Intl.DateTimeFormat('en-US', {
+                        timeZone: timezone,
+                        hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+                    });
+                    return formatter.format(now);
+                } catch (e) { console.warn("Error in getDigitalTime for " + timezone + ": " + e.message); return "--:--:-- --"; }
+            }
+
+            function getTargetTimezoneOffsetMinutesFromUTC(ianaTimeZone) {
+                const date = new Date();
+                try {
+                    const formatter = new Intl.DateTimeFormat('en', {
+                        timeZone: ianaTimeZone, hour12: false,
+                        year: 'numeric', month: 'numeric', day: 'numeric',
+                        hour: 'numeric', minute: 'numeric', second: 'numeric'
+                    });
+                    const partsArray = formatter.formatToParts(date);
+                    const parts = {};
+                    partsArray.forEach(part => {
+                        if (['year', 'month', 'day', 'hour', 'minute', 'second'].includes(part.type)) {
+                            parts[part.type] = parseInt(part.value, 10);
+                        }
+                    });
+                    const requiredNumericParts = ['year', 'month', 'day', 'hour', 'minute', 'second'];
+                    for (const rp of requiredNumericParts) {
+                        if (typeof parts[rp] !== 'number' || isNaN(parts[rp])) {
+                            throw new Error(`Invalid date part "${rp}" for ${ianaTimeZone}`);
+                        }
+                    }
+                    const dateInTargetZoneAsUTC = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+                    const currentActualUTC = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds());
+                    if (isNaN(dateInTargetZoneAsUTC) || isNaN(currentActualUTC)) {
+                        return null;
+                    }
+                    return -((currentActualUTC - dateInTargetZoneAsUTC) / 60000);
+                } catch (e) {
+                    console.warn(`DEBUG: Offset calculation error for timezone "${ianaTimeZone}": ${e.message}.`);
+                    return null;
+                }
+            }
+
+            function updateClockMainDetails(timezone) {
+                if (!timezone) return;
+                $('.digital-time-main').text(getDigitalTime(timezone));
+            }
+
+            function setClockTimezone(timezone, label) {
+                console.log("Clock Script: setClockTimezone called with TZ:", timezone, "Label:", label);
+                activeTimezone = timezone;
+                $('#clockTimezoneLabel').text(label);
+                let diffString = "(--h --m)";
+                if (userLocalOffsetMinutesFromUTC !== null) {
+                    const targetOffsetFromUTC = getTargetTimezoneOffsetMinutesFromUTC(timezone);
+                    if (targetOffsetFromUTC !== null) {
+                        const diffMinutes = targetOffsetFromUTC - userLocalOffsetMinutesFromUTC;
+                        if (timezone === userLocalTimezone) {
+                            diffString = "(Your local time)";
+                        } else if (diffMinutes === 0) {
+                            diffString = "(Same as your local time)";
+                        } else {
+                            const sign = diffMinutes > 0 ? "+" : "-";
+                            const absDiffMinutes = Math.abs(diffMinutes);
+                            const hoursPart = Math.floor(absDiffMinutes / 60);
+                            const minutesPart = absDiffMinutes % 60;
+                            diffString = `(${sign}${hoursPart}h`;
+                            if (minutesPart > 0) { diffString += ` ${minutesPart}m`; }
+                            diffString += " from you)";
+                        }
+                    } else { console.warn("Clock Script: Time difference calculation failed (target offset null) for " + timezone); }
+                } else { diffString = "(User offset unknown)"; console.warn("Clock Script: Time difference calculation failed (user offset null)."); }
+                $('.time-diff-main').text(diffString);
+
+                if (clockInterval) clearInterval(clockInterval);
+
+                lastHourChimePlayedFor = -1; // Reset chime tracking for the new timezone
+
+                drawClockHands(activeTimezone); // Initial draw for new timezone
+                updateClockMainDetails(activeTimezone);
+
+                clockInterval = setInterval(() => {
+                    if (!activeTimezone) { return; }
+                    drawClockHands(activeTimezone);
+                    updateClockMainDetails(activeTimezone);
+                }, 1000);
+            }
+
+            function populateCountryDropdown() {
+                console.log("Clock Script: populateCountryDropdown called");
+                const $dropdown = $('#country-dropdown');
+                let detectedUserTimezone = 'UTC';
+                try {
+                    detectedUserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                } catch(e) { console.warn("Clock Script: Failed to detect user timezone for dropdown, defaulting to UTC."); }
+
+                console.log("Clock Script: Detected user timezone for dropdown:", detectedUserTimezone);
+
+                $dropdown.append($('<option>', {
+                    value: detectedUserTimezone,
+                    text: 'Your Local Time (' + detectedUserTimezone.split('/').pop().replace(/_/g, ' ') + ')',
+                    'data-label': 'Your Local Time (Default)' ,
+                    'data-istrulyuserlocal': 'true'
+                }));
+
+                countryTimezones.forEach(country => {
+                    if (country.timezone !== detectedUserTimezone) {
+                        const $option = $('<option>', { value: country.timezone, text: country.name, 'data-label': country.name });
+                        $dropdown.append($option);
+                    } else { // Update the text and label if the detected timezone matches one in the list
+                        const userLocalOption = $dropdown.find('option[value="' + detectedUserTimezone + '"][data-istrulyuserlocal="true"]');
+                        if (userLocalOption.length > 0) {
+                            userLocalOption.attr('data-label', country.name); // Use country name for the label
+                            userLocalOption.text(country.name + ' (Local)');
+                        }
+                    }
+                });
+                try {
+                    $dropdown.val(detectedUserTimezone).trigger('change'); // Set and trigger change for initial load
+                } catch(e) {
+                    console.warn("Clock Script: Error setting initial dropdown value. Selecting first available and triggering change.", e);
+                    if ($dropdown.find('option').length > 1) { // Ensure there's more than the placeholder
+                        $dropdown.prop('selectedIndex', 1).trigger('change'); // Select first actual entry
+                    } else {
+                         $dropdown.prop('selectedIndex', 0).trigger('change'); // Select placeholder if nothing else
+                    }
+                }
+                console.log("Clock Script: Dropdown populated. Selected value:", $dropdown.val());
+            }
+
+            $('#country-dropdown').on('change', function() {
+                const selectedOption = $(this).find('option:selected');
+                const selectedTimezone = selectedOption.val();
+                const optionTextInDropdown = selectedOption.text(); // Text visible in dropdown
+                const dataLabelAttribute = selectedOption.attr('data-label'); // Preferred label from data attribute
+                const isMarkedAsUserLocal = selectedOption.data('istrulyuserlocal') === true;
+
+                console.log("--- Dropdown Change Event ---");
+                console.log("Selected Option Text (in dropdown):", optionTextInDropdown);
+                console.log("Selected Option Value (Timezone):", selectedTimezone);
+                console.log("Selected Option data-label:", dataLabelAttribute);
+                console.log("Is truly user local:", isMarkedAsUserLocal);
+
+
+                let finalLabelToDisplay;
+
+                if (dataLabelAttribute) { // Prioritize data-label if it exists
+                    finalLabelToDisplay = dataLabelAttribute;
+                     // If it's the user's local time, the data-label might be "Your Local Time (Default)" or the actual city name
+                    // if the local timezone was found in the list. We want the more descriptive one if available.
+                    if (isMarkedAsUserLocal) {
+                         // Attempt to get a cleaner city name if data-label isn't already a specific location name
+                        let localCityName = userLocalTimezone.split('/').pop().replace(/_/g, ' ');
+                        let matchedCountry = countryTimezones.find(c => c.timezone === userLocalTimezone);
+                        if (matchedCountry) {
+                            finalLabelToDisplay = matchedCountry.name; // Prefer the specific name from our list
+                        } else if (dataLabelAttribute.includes("(Default)") || dataLabelAttribute.includes("Your Local Time")) {
+                             finalLabelToDisplay = localCityName; // Fallback to generic city name from IANA
+                        }
+                        // else keep dataLabelAttribute if it's already specific
+                    }
+                } else { // Fallback to option text if no data-label
+                    finalLabelToDisplay = optionTextInDropdown;
+                }
+
+
+                console.log("Final label for clock display:", finalLabelToDisplay);
+
+                if (selectedTimezone) {
+                    setClockTimezone(selectedTimezone, finalLabelToDisplay);
+                } else {
+                     // Handle empty selection if necessary, e.g., revert to a default or clear the clock
+                    $('#clockTimezoneLabel').text("Select a Location");
+                    $('.digital-time-main').text("--:--:-- --");
+                    $('.time-diff-main').text("(--h --m)");
+                    if(clockInterval) clearInterval(clockInterval);
+                    // Optionally clear analog hands or set to a default (e.g., 12:00:00)
+                    const $analogClock = $('#worldAnalogClock');
+                    $analogClock.find('.second-hand').css('transform', `rotate(0deg)`);
+                    $analogClock.find('.minute-hand').css('transform', `rotate(0deg)`);
+                    $analogClock.find('.hour-hand').css('transform', `rotate(0deg)`);
+                }
+            });
+
+            // --- Idle State Logic ---
+            let idleTimer;
+            const IDLE_TIMEOUT = 10000; // 10 seconds
+            const FADE_DURATION = 300; // milliseconds
+
+            function enterIdleState() {
+                console.log("Idle Script: Entering Idle State - Hiding cursor and elements.");
+                $('body').css('cursor', 'none');
+                $('#clockTimezoneLabel').fadeOut(FADE_DURATION);
+                $('#clockDetailDisplay').fadeOut(FADE_DURATION);
+                $('.country-selector-container').fadeOut(FADE_DURATION);
+            }
+
+            function exitIdleStateAndResetTimer() {
+                // Only fade in if they are currently hidden AND not already animating
+                if (!$('#clockTimezoneLabel').is(':visible') && !$('#clockTimezoneLabel').is(':animated')) {
+                    $('#clockTimezoneLabel').fadeIn(FADE_DURATION);
+                }
+                if (!$('#clockDetailDisplay').is(':visible') && !$('#clockDetailDisplay').is(':animated')) {
+                    $('#clockDetailDisplay').fadeIn(FADE_DURATION);
+                }
+                if (!$('.country-selector-container').is(':visible') && !$('.country-selector-container').is(':animated')) {
+                    $('.country-selector-container').fadeIn(FADE_DURATION);
+                }
+                $('body').css('cursor', 'auto');
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(enterIdleState, IDLE_TIMEOUT);
+            }
+            // Initial call to set up the timer and show elements
+            exitIdleStateAndResetTimer();
+            // Reset timer on user activity
+            $(document).on('mousemove mousedown keydown', function(event) {
+                exitIdleStateAndResetTimer();
+            });
+            // --- End of Idle State Logic ---
+
+
+            // --- Initial Clock Setup ---
+            console.log("Clock Script: Starting initial clock setup.");
+            try {
+                userLocalTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                userLocalOffsetMinutesFromUTC = getTargetTimezoneOffsetMinutesFromUTC(userLocalTimezone);
+                if (userLocalOffsetMinutesFromUTC === null) {
+                    console.warn("Clock Script: Initial user local offset calculation failed. Defaulting to UTC (offset 0). User TZ was:", userLocalTimezone);
+                    userLocalTimezone = "UTC"; userLocalOffsetMinutesFromUTC = 0;
+                }
+            } catch (e) {
+                console.warn("Clock Script: Error determining user's timezone in initial setup. Defaulting to UTC.", e);
+                userLocalTimezone = "UTC"; userLocalOffsetMinutesFromUTC = 0;
+            }
+            console.log("Clock Script: User Local Timezone set to:", userLocalTimezone, "Offset from UTC (minutes):", userLocalOffsetMinutesFromUTC);
+
+            populateCountryDropdown(); // This will now also trigger 'change' to set the initial clock
+
+            // The initial call to setClockTimezone is now handled by the .trigger('change') in populateCountryDropdown
+            console.log("Clock Script: Initial clock setup complete (delegated to dropdown change).");
+            console.log("All scripts in document.ready should have executed if no errors above this.");
+        });
+        // ==== END OF WORLD CLOCK SCRIPT ====
+    </script>
+</body>
+</html>

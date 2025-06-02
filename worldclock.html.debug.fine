@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug TV - Analog Rebuild</title>
+    <style>
+        /* VERY Basic Body Styles for Readability */
+        body { 
+            font-family: sans-serif; 
+            background-color: #222; /* Dark background */
+            color: #eee; /* Light text */
+            margin: 0; padding: 10px; 
+            display: flex; flex-direction: column; align-items: center; 
+        }
+
+        /* --- EXTREMELY Simplified & Hardcoded Analog Clock Styles --- */
+        .analog-clock { 
+            width: 250px; 
+            height: 250px; 
+            position: relative; 
+            background-color: #555; /* Medium gray background */
+            border: 3px solid #888; 
+            border-radius: 50%; 
+            margin: 10px auto; 
+        }
+        .hand { 
+            position: absolute; 
+            bottom: 50%; 
+            left: 50%; 
+            transform-origin: bottom center; 
+            z-index: 10; 
+        }
+        .hour-hand { 
+            width: 8px; height: 60px; margin-left: -4px; 
+            background-color: blue; /* DEBUG COLOR */
+        }
+        .minute-hand { 
+            width: 6px; height: 80px; margin-left: -3px; 
+            background-color: green; /* DEBUG COLOR */
+        }
+        .second-hand { 
+            width: 3px; height: 95px; margin-left: -1.5px; /* CSS calc needs space: calc(3px / -2) */
+            background-color: orange; /* DEBUG COLOR */
+        }
+        .center-dot { 
+            width: 15px; height: 15px; background-color: #111; 
+            border-radius: 50%; position: absolute; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); z-index: 14; 
+        }
+        .spoke { 
+            position: absolute; bottom: 50%; left: 50%; 
+            width: 2px; height: 120px; background-color: #999; 
+            transform-origin: bottom center; z-index: 6; margin-left: -1px;
+        }
+        .ball {
+            position: absolute; 
+            width: 18px; height: 18px; border-radius: 50%; 
+            z-index: 7; transform: translate(-50%, -50%); 
+            background-color: #FFF; border: 1px solid #777;
+            display: flex; align-items: center; justify-content: center;
+            font-family: serif; font-size: 9px; font-weight: bold; color: #000;
+        }
+        /* End of Simplified Analog Styles */
+
+        .clock-label { font-size: 1.5em; font-weight: bold; color: #FFC2D1; text-align: center; margin-bottom: 8px; }
+        #clockDetailDisplay { text-align: center; margin-bottom: 15px; padding: 5px; background-color: #444; border-radius: 5px; }
+        .digital-time-main { font-family: monospace; font-size: 1.5em; color: #eee; }
+        
+        #status-log-container { width: 100%; max-width: 600px; max-height: 150px; overflow-y: auto; background-color: rgba(0,0,0,0.8); color: white; font-size: 12px; z-index: 1000; padding: 5px; box-sizing: border-box; font-family: monospace; margin-top: 10px;}
+        .log-entry { padding: 2px; border-bottom: 1px dotted #555; white-space: pre-wrap; }
+        .log-entry.error { background-color: #500; color: #fcc; }
+        .log-entry.success { background-color: #050; color: #cfc; }
+        .log-entry.info { color: #ccf; }
+        #critical-error-display { color: red; background-color: yellow; font-weight: bold; font-size: 1.2em; text-align: center; padding: 10px; border: 1px solid red; margin-bottom:10px; display:none; z-index: 1001;}
+    </style>
+    <script>
+        var ntp = {}; 
+        console.log("Dummy ntp object defined (Debug 14).");
+        window.onerror = function(message, source, lineno, colno, error) { 
+            var errorMsg = "GLOBAL ERROR: " + message + (source ? " at " + source.split('/').pop() : "") + (lineno ? ":" + lineno : "");
+            var criticalErrorEl = document.getElementById('critical-error-display');
+            if (criticalErrorEl) { criticalErrorEl.innerHTML += errorMsg + "<br>"; criticalErrorEl.style.display = 'block'; }
+            var statusLogEl = document.getElementById('status-log');
+            if (statusLogEl) { var entry = document.createElement('div'); entry.className = 'log-entry error'; entry.textContent = errorMsg; statusLogEl.appendChild(entry); statusLogEl.scrollTop = statusLogEl.scrollHeight; }
+            console.error("ONERROR:", message, source, lineno, error); return true; 
+        };
+        console.log("window.onerror attached (Debug 14).");
+    </script>
+</head>
+<body>
+    <div id="critical-error-display"></div>
+    
+    <div id="clockTimezoneLabel" class="clock-label">TV Local Time</div>
+    <div id="worldAnalogClock" class="analog-clock">
+        <div class="hand hour-hand"></div>
+        <div class="hand minute-hand"></div>
+        <div class="hand second-hand"></div>
+        <div class="center-dot"></div>
+    </div>
+    <div id="clockDetailDisplay">
+        <span class="digital-time-main">--:--:-- --</span>
+    </div>
+
+    <div id="status-log-container">
+        <div id="status-log" class="log-entry info">Log Init...</div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        var statusLogEl = document.getElementById('status-log');
+        var logCounter = 0;
+        var maxLogEntries = 20; 
+
+        function screenLog(message, type) {
+             if (statusLogEl) { 
+                logCounter++; var entry = document.createElement('div'); entry.className = 'log-entry ' + (type || 'info');
+                var shortMessage = message.toString(); if (shortMessage.length > 150) shortMessage = shortMessage.substring(0,147) + "...";
+                entry.textContent = logCounter + ". " + new Date().toLocaleTimeString() + ": " + shortMessage;
+                while (statusLogEl.childNodes.length >= maxLogEntries) { statusLogEl.removeChild(statusLogEl.firstChild); }
+                statusLogEl.appendChild(entry); statusLogEl.scrollTop = statusLogEl.scrollHeight;
+            } console.log((type || "INFO") + ": " + message);
+        }
+        
+        screenLog('Initial script block after body.', 'info');
+
+        $(document).ready(function () {
+            screenLog('jQuery Document Ready!', 'success');
+            
+            var $analogClock = $('#worldAnalogClock'); // Cache this
+            if(!$analogClock.length) {
+                screenLog("FATAL: Analog clock container #worldAnalogClock not found!", "error");
+                return;
+            }
+            screenLog("#worldAnalogClock found. Width: " + $analogClock.width() + "px, Height: " + $analogClock.height() + "px", "info");
+
+
+            try {
+                createAnalogClockMarkers(); 
+            } catch (e) {
+                screenLog("Error calling createAnalogClockMarkers: " + e.message, "error");
+            }
+
+            var clockInterval; 
+            var $hourHand = $analogClock.find('.hour-hand'); // Find within clock
+            var $minuteHand = $analogClock.find('.minute-hand');
+            var $secondHand = $analogClock.find('.second-hand');
+            var $digitalTime = $('#clockDetailDisplay .digital-time-main');
+            var $clockLabel = $('#clockTimezoneLabel');
+
+            screenLog("Hour hand found: " + $hourHand.length + " (w:"+$hourHand.width()+" h:"+$hourHand.height()+")", $hourHand.length ? 'success' : 'error');
+            screenLog("Minute hand found: " + $minuteHand.length + " (w:"+$minuteHand.width()+" h:"+$minuteHand.height()+")", $minuteHand.length ? 'success' : 'error');
+            screenLog("Second hand found: " + $secondHand.length + " (w:"+$secondHand.width()+" h:"+$secondHand.height()+")", $secondHand.length ? 'success' : 'error');
+            screenLog("Digital time el found: " + $digitalTime.length, $digitalTime.length ? 'success' : 'error');
+
+            if(!$hourHand.length || !$minuteHand.length || !$secondHand.length || !$digitalTime.length) {
+                screenLog("One or more essential clock DOM elements NOT FOUND.", "error");
+                $clockLabel.text('Clock Element Error!').css('color', 'red');
+                return; 
+            }
+            
+            $clockLabel.text('TV Local Clock - Rebuild').css('color', '#90ee90'); // Light Green
+
+            function createAnalogClockMarkers() {
+                screenLog("createAnalogClockMarkers called", "info");
+                var romanNumeralsMap = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII' };
+                var markerRadiusPercent = 40; var numElements = 12;
+                
+                $analogClock.find('.spoke, .ball').remove(); 
+                screenLog("Old markers cleared. Appending new markers to #worldAnalogClock (width: " + $analogClock.width() + "px)", "info");
+                
+                for (var h = 1; h <= numElements; h++) { 
+                    var spokeRotationCssDeg = (h % 12) * 30;
+                    var positioningMathAngleDeg = spokeRotationCssDeg - 90;
+                    var positioningAngleRad = positioningMathAngleDeg * (Math.PI / 180);
+                    var xMarker = 50 + (markerRadiusPercent * Math.cos(positioningAngleRad));
+                    var yMarker = 50 + (markerRadiusPercent * Math.sin(positioningAngleRad));
+                    
+                    var $spokeDiv = $('<div>').addClass('spoke').css('transform', 'rotate(' + spokeRotationCssDeg + 'deg)');
+                    var $ballDiv = $('<div>').addClass('ball')
+                                      .css({ top: yMarker + '%', left: xMarker + '%' })
+                                      .text(romanNumeralsMap[h]);
+                    
+                    $analogClock.append($spokeDiv);
+                    $analogClock.append($ballDiv);
+                    // More detailed log for one marker to check its properties after append
+                    if (h === 1) {
+                         screenLog("Appended marker 1 (spoke): visible=" + $spokeDiv.is(':visible') + " w=" + $spokeDiv.width() + " h=" + $spokeDiv.height() + " posL=" + $spokeDiv.css('left') + " posT=" + $spokeDiv.css('top'), "info");
+                         screenLog("Appended marker 1 (ball): visible=" + $ballDiv.is(':visible') + " w=" + $ballDiv.width() + " h=" + $ballDiv.height() + " posL=" + $ballDiv.css('left') + " posT=" + $ballDiv.css('top'), "info");
+                    }
+                }
+                screenLog("Analog markers creation loop FINISHED.", "success");
+            }
+
+            function updateLocalClock() {
+                try {
+                    var now = new Date(); 
+                    var hours = now.getHours(); var minutes = now.getMinutes(); var seconds = now.getSeconds();
+                    screenLog("Tick - H:" + hours + " M:" + minutes + " S:" + seconds, "info"); 
+
+                    var displayHourForAnalog = hours % 12 || 12;
+                    var hourDegrees = (displayHourForAnalog * 30) + (minutes / 60 * 30);
+                    var minuteDegrees = minutes * 6; 
+                    var secondDegrees = seconds * 6; 
+
+                    // Log before applying transform
+                    screenLog("H: vis="+$hourHand.is(':visible')+" w="+$hourHand.width()+" deg="+hourDegrees, "info");
+                    $hourHand.css({
+                        'transform': 'rotate(' + hourDegrees + 'deg)',
+                        '-webkit-transform': 'rotate(' + hourDegrees + 'deg)' // Vendor prefix
+                    });
+                    
+                    screenLog("M: vis="+$minuteHand.is(':visible')+" w="+$minuteHand.width()+" deg="+minuteDegrees, "info");
+                    $minuteHand.css({
+                        'transform': 'rotate(' + minuteDegrees + 'deg)',
+                        '-webkit-transform': 'rotate(' + minuteDegrees + 'deg)'
+                    });
+                    
+                    screenLog("S: vis="+$secondHand.is(':visible')+" w="+$secondHand.width()+" deg="+secondDegrees, "info");
+                    $secondHand.css({
+                        'transform': 'rotate(' + secondDegrees + 'deg)',
+                        '-webkit-transform': 'rotate(' + secondDegrees + 'deg)'
+                    });
+
+                    var digitalH = hours; var ampm = digitalH >= 12 ? 'PM' : 'AM';
+                    digitalH = digitalH % 12; digitalH = digitalH ? digitalH : 12; 
+                    var digitalM = minutes < 10 ? '0' + minutes : minutes;
+                    var digitalS = seconds < 10 ? '0' + seconds : seconds;
+                    var digitalString = digitalH + ':' + digitalM + ':' + digitalS + ' ' + ampm;
+                    
+                    $digitalTime.text(digitalString);
+
+                } catch(e_update) {
+                    screenLog("ERROR in updateLocalClock: " + e_update.message, "error");
+                    if (clockInterval) { clearInterval(clockInterval); screenLog("Clock interval STOPPED.", "error"); }
+                }
+            }
+            
+            screenLog("Attempting to start local clock interval.", "info");
+            if (clockInterval) clearInterval(clockInterval); 
+            
+            clockInterval = setInterval(updateLocalClock, 1000);
+            updateLocalClock(); 
+            screenLog("Local clock interval started.", "success");
+        });
+        screenLog('Main script block finished execution.', "info");
+    </script>
+</body>
+</html>
